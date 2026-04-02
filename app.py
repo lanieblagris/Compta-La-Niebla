@@ -120,7 +120,7 @@ else:
             b = st.number_input("💵 Total vente ($)", min_value=0, key="drb")
             if st.form_submit_button("TRANSMETTRE DROGUE"): handle_submit("Drogue", butin=b, drogue=d, quantite=q)
 
-    # --- TABLEAU DES OBJECTIFS ---
+  # --- TABLEAU DES OBJECTIFS (DROGUE EXCLUE DES ACTIONS) ---
     st.markdown("---")
     st.write("### 📊 OBJECTIFS DE LA SEMAINE")
     
@@ -128,34 +128,39 @@ else:
         data = conn.read(worksheet="Rapports", ttl=0)
         
         if data is not None and not data.empty:
-            # Nettoyage des données
             data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
             data['Quantite'] = pd.to_numeric(data['Quantite'], errors='coerce').fillna(0)
             data = data.dropna(subset=['Date'])
             
-            # Calcul du début de semaine
             today = datetime.datetime.now()
             start_week = (today - datetime.timedelta(days=today.weekday())).replace(hour=0, minute=0, second=0)
-            
-            week_data = data[data['Date'] >= start_week]
+            week_data = data[data['Date'] >= start_week].copy()
 
             if not week_data.empty:
-                stats = week_data.groupby('Membre').agg({
-                    'Action': 'count',
-                    'Quantite': 'sum'
-                }).reset_index()
+                # 1. On sépare les actions classiques de la drogue
+                # On compte les actions qui ne sont PAS de la drogue
+                actions_df = week_data[week_data['Action'] != "Drogue"]
+                stats_actions = actions_df.groupby('Membre').agg({'Action': 'count'}).reset_index()
+                
+                # On calcule le total de drogue pour tout le monde
+                stats_drogue = week_data.groupby('Membre').agg({'Quantite': 'sum'}).reset_index()
+
+                # Fusion des deux pour l'affichage
+                stats = pd.merge(stats_actions, stats_drogue, on='Membre', how='outer').fillna(0)
 
                 for _, row in stats.iterrows():
                     c1, c2, c3 = st.columns([1, 2, 2])
                     c1.write(f"**{row['Membre']}**")
-                    # Barre Actions (Objectif 20)
+                    
+                    # Barre Actions (Objectif 20) - Ici on ne compte que ATM, Supérette, Go Fast, Cambriolage
                     val_act = int(row['Action'])
-                    c2.progress(min(val_act/20, 1.0), text=f"Actions: {val_act}/20")
+                    c2.progress(min(val_act/20, 1.0), text=f"Missions: {val_act}/20")
+                    
                     # Barre Drogue (Objectif 300)
                     val_dro = int(row['Quantite'])
                     c3.progress(min(val_dro/300, 1.0), text=f"Drogue: {val_dro}/300")
             else:
-                st.info("Aucune donnée pour la semaine du " + start_week.strftime("%d/%m"))
+                st.info(f"Aucune activité pour la semaine du {start_week.strftime('%d/%m')}")
         else:
             st.info("Tu te bouge le cul ou quoi ?")
     except Exception as e:
