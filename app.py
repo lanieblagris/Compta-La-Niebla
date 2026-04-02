@@ -67,12 +67,14 @@ else:
     pseudo = st.session_state['user_pseudo']
     st.markdown(f'<marquee class="brouillard-text" scrollamount="5">⚠️ TRANSMISSION SÉCURISÉE ... BIENVENUE {pseudo.upper()} ... TOUT RESTE DANS LA BRUME ... ⚠️</marquee>', unsafe_allow_html=True)
 
-    # --- LOGO BANNIÈRE (TAILLE AJUSTÉE) ---
+   # --- CONFIGURATION DE LA BANNIÈRE PLEINE LARGEUR ---
     LOGO_URL = "https://raw.githubusercontent.com/lanieblagris/Compta-La-Niebla/main/logo.png?v=3"
     
-    # On retire "use_container_width" et on met une largeur fixe
-    # 700 ou 800 est souvent idéal pour une bannière propre
-    st.image(LOGO_URL, width=700)
+    st.markdown(f"""
+        <div style="width: 100%; overflow: hidden; margin-bottom: 20px;">
+            <img src="{LOGO_URL}" style="width: 100%; height: 250px; object-fit: cover; border-radius: 10px;">
+        </div>
+        """, unsafe_allow_html=True)
     
     st.write(f"<p style='text-align: center; color: #ff4b4b; margin-top:-20px;'>Session active : <b>{pseudo}</b></p>", unsafe_allow_html=True)
 
@@ -156,7 +158,7 @@ else:
                     # --- CALCUL MISSIONS (OBJ: 20) ---
                     val_act = int(row['Action'])
                     diff_act = val_act - 20
-                    txt_act = f"Missions: {val_act}/20"
+                    txt_act = f"Actions: {val_act}/20"
                     if diff_act > 0:
                         txt_act += f"  (🔥 +{diff_act})"
                     
