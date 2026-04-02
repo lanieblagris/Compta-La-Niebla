@@ -148,58 +148,74 @@ else:
             b = st.number_input("💵 Total vente ($)", min_value=0, key="drb")
             if st.form_submit_button("TRANSMETTRE DROGUE"): handle_submit("Drogue", butin=b, drogue=d, quantite=q)
 
-    # --- TABLEAU DES OBJECTIFS HEBDOMADAIRES ---
+   # --- TABLEAU DES OBJECTIFS & RÉCAPITULATIF FINANCIER ---
     st.markdown("---")
-    st.write("### 📊 OBJECTIFS DE LA SEMAINE")
+    st.write("### 📊 STATISTIQUES DE LA SEMAINE")
     
     try:
-        # Lire les données fraîches
         data = conn.read(worksheet="Rapports", ttl=0)
         
         if data is not None and not data.empty:
-            # Nettoyage et conversion
             data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
             data['Quantite'] = pd.to_numeric(data['Quantite'], errors='coerce').fillna(0)
+            data['Butin'] = pd.to_numeric(data['Butin'], errors='coerce').fillna(0)
             data = data.dropna(subset=['Date'])
             
-            # Calcul du début de semaine (Lundi)
             today = datetime.datetime.now()
             start_week = (today - datetime.timedelta(days=today.weekday())).replace(hour=0, minute=0, second=0)
-            
-            # Filtrer pour la semaine actuelle
             week_data = data[data['Date'] >= start_week].copy()
 
             if not week_data.empty:
-                # 1. Missions classiques (SAUF Drogue) -> Objectif 20
+                # 1. Calcul pour les Missions (Tout sauf Drogue)
                 actions_df = week_data[week_data['Action'] != "Drogue"]
-                stats_actions = actions_df.groupby('Membre').agg({'Action': 'count'}).reset_index()
+                stats_actions = actions_df.groupby('Membre').agg({
+                    'Action': 'count',
+                    'Butin': 'sum'
+                }).reset_index()
+                stats_actions.rename(columns={'Butin': 'Argent_Missions'}, inplace=True)
                 
-                # 2. Vente de Drogue (Uniquement Drogue) -> Objectif 300
-                stats_drogue = week_data.groupby('Membre').agg({'Quantite': 'sum'}).reset_index()
+                # 2. Calcul pour la Drogue
+                drogue_df = week_data[week_data['Action'] == "Drogue"]
+                stats_drogue = drogue_df.groupby('Membre').agg({
+                    'Quantite': 'sum',
+                    'Butin': 'sum'
+                }).reset_index()
+                stats_drogue.rename(columns={'Butin': 'Argent_Drogue'}, inplace=True)
 
-                # Fusion des deux DataFrames pour l'affichage
+                # Fusion des données
                 stats = pd.merge(stats_actions, stats_drogue, on='Membre', how='outer').fillna(0)
 
-                # Affichage par membre
+                # --- AFFICHAGE DES BARRES DE PROGRESSION ---
                 for _, row in stats.iterrows():
                     c1, c2, c3 = st.columns([1, 2, 2])
                     c1.write(f"**{row['Membre']}**")
                     
-                    # --- MISSIONS (OBJ: 20) ---
+                    # Missions (Obj 20)
                     val_act = int(row['Action'])
-                    diff_act = val_act - 20
-                    txt_act = f"Actions: {val_act}/20"
-                    if diff_act > 0:
-                        txt_act += f" 🔥 (+{diff_act})"
+                    txt_act = f"Missions: {val_act}/20"
+                    if val_act > 20: txt_act += f" 🔥 (+{val_act-20})"
                     c2.progress(min(val_act/20, 1.0), text=txt_act)
                     
-                    # --- DROGUE (OBJ: 300) ---
+                    # Drogue (Obj 300)
                     val_dro = int(row['Quantite'])
-                    diff_dro = val_dro - 300
                     txt_dro = f"Drogue: {val_dro}/300"
-                    if diff_dro > 0:
-                        txt_dro += f" 💰 (+{diff_dro})"
+                    if val_dro > 300: txt_dro += f" 💰 (+{val_dro-300})"
                     c3.progress(min(val_dro/300, 1.0), text=txt_dro)
+
+                # --- NOUVEAU : TABLEAU FINANCIER ---
+                st.write("#### 💸 Récapitulatif des Gains")
+                
+                # On prépare un tableau propre pour l'affichage
+                df_finance = stats[['Membre', 'Argent_Missions', 'Argent_Drogue']].copy()
+                df_finance.columns = ['Membre', 'Butin Missions ($)', 'Ventes Drogue ($)']
+                
+                # Formatage pour ajouter le symbole $ et les séparateurs de milliers
+                df_finance['Butin Missions ($)'] = df_finance['Butin Missions ($)'].apply(lambda x: f"{x:,.0f} $".replace(',', ' '))
+                df_finance['Ventes Drogue ($)'] = df_finance['Ventes Drogue ($)'].apply(lambda x: f"{x:,.0f} $".replace(',', ' '))
+                
+                # Affichage du tableau stylisé
+                st.table(df_finance)
+
             else:
                 st.info(f"Aucune activité pour la semaine du {start_week.strftime('%d/%m')}")
         else:
