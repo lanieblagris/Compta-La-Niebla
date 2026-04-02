@@ -157,7 +157,7 @@ else:
             else:
                 st.info("Aucune donnée pour la semaine du " + start_week.strftime("%d/%m"))
         else:
-            st.info("Tu te bouge le cul ou quoi?.")
+            st.info("Tu te bouge le cul ou quoi ?")
     except Exception as e:
         st.info("En attente de données valides...")
         # st.write(e) # Décommenter pour voir l'erreur exacte si besoin
