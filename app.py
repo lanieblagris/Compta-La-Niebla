@@ -11,6 +11,7 @@ USERS = {
     "Admin": {"password": "0000", "pseudo": "Le Patron"},
     "Alex": {"password": "1234", "pseudo": "Alex Smith"},
     "Dany": {"password": "081219", "pseudo": "Dany Smith"},
+    "Emilio": {"password": "azertyuiop123", "pseudo": "Emilio Montoya"},
 }
 
 # --- STYLE CSS (NOIR PUR ET IMMERSIF) ---
