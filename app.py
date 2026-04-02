@@ -212,7 +212,7 @@ else:
             else:
                 st.info("Aucune activité cette semaine.")
         else:
-            st.info("Au boulot feneant!")
+            st.info("Au boulot feneant !")
     except Exception as e:
         st.info("En attente de données...")
     st.markdown("---")
