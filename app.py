@@ -8,12 +8,13 @@ st.set_page_config(page_title="La Niebla - Safe House", page_icon="🥷", layout
 
 # --- BASE DE DONNÉES DES MEMBRES ---
 USERS = {
+
     "Admin": {"password": "0000", "pseudo": "Le Patron"},
     "Alex": {"password": "1234", "pseudo": "Alex Smith"},
     "Dany": {"password": "5678", "pseudo": "Dany Smith"},
 }
 
-# --- STYLE CSS ---
+# --- STYLE CSS (Ambiance Brouillard) ---
 st.markdown("""
     <style>
     .stApp { background: linear-gradient(180deg, #0e1117 0%, #1c1f26 100%); }
@@ -31,6 +32,15 @@ st.markdown("""
     h1 { color: #ffffff; text-align: center; font-family: 'Courier New'; }
     .stForm { border: 1px solid #444; border-radius: 15px; background-color: rgba(38, 39, 48, 0.6); }
     .stButton>button { width: 100%; background-color: #ff4b4b; color: white; font-weight: bold; border-radius: 10px; }
+    
+    /* Centrage de l'image de logo */
+    [data-testid="stImage"] {
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+        margin-top: -30px; /* Décale légèrement vers le haut */
+        margin-bottom: -20px; /* Réduit l'espace avec le texte dessous */
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -52,7 +62,7 @@ def check_login():
 # --- LOGIQUE D'AFFICHAGE ---
 
 if not st.session_state['connected']:
-    # PAGE DE CONNEXION
+    # PAGE DE CONNEXION (SAFE HOUSE)
     st.write("<h1>☁️ S A F E &nbsp; H O U S E</h1>", unsafe_allow_html=True)
     with st.form("login_form"):
         st.write("<p style='text-align: center; color: #888;'>Identifiez-vous pour entrer dans le brouillard</p>", unsafe_allow_html=True)
@@ -70,7 +80,12 @@ else:
         </marquee>
         """, unsafe_allow_html=True)
 
-    st.write(f"<h1>☁️ L A &nbsp; N I E B L A</h1>", unsafe_allow_html=True)
+    # --- REMPLACEMENT DU TITRE PAR TON IMAGE ---
+    # Nous utilisons l'URL GitHub de ton image pour qu'elle s'affiche sur ton site
+    LOGO_URL = "https://raw.githubusercontent.com/lanieblagris/Compta-La-Niebla/main/Gemini_Generated_Image_9z4bsd9z4bsd9z4b.png"
+    st.image(LOGO_URL, width=350) # Ajuste width pour la taille (350px est une bonne base)
+
+    st.markdown("<p style='text-align: center; color: #888; font-style: italic;'>L'organisation ne dort jamais. Archivez vos actions.</p>", unsafe_allow_html=True)
     st.write(f"<p style='text-align: center; color: #ff4b4b;'>Session active : <b>{pseudo}</b></p>", unsafe_allow_html=True)
 
     # Connexion Sheets
@@ -91,7 +106,7 @@ else:
             updated_df = pd.concat([existing_data, new_row], ignore_index=True)
             conn.update(worksheet="Rapports", data=updated_df)
             st.snow()
-            st.success(f"Rapport de {st.session_state['user_pseudo']} archivé.")
+            st.success(f"Rapport archivé.")
         except Exception as e:
             st.error(f"Erreur : {e}")
 
