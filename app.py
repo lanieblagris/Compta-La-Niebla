@@ -13,29 +13,54 @@ USERS = {
     "Dany": {"password": "081219", "pseudo": "Dany Smith"},
 }
 
-# --- STYLE CSS (Immersif) ---
-st.markdown("""
+# --- STYLE CSS (IMMERSION TOTALE AVEC BRUME) ---
+# Nous utilisons les liens bruts (raw) pour charger les images directement.
+LOGO_URL = "https://raw.githubusercontent.com/lanieblagris/Compta-La-Niebla/main/logo.png?v=3"
+BRUME_URL = "https://raw.githubusercontent.com/lanieblagris/Compta-La-Niebla/main/brume.png?v=1"
+
+st.markdown(f"""
     <style>
-    .stApp { background: linear-gradient(180deg, #0e1117 0%, #1c1f26 100%); }
-    .brouillard-text {
+    /* 1. FOND NOIR TOTAL ET BRUME FIXE */
+    .stApp {{
+        background-color: #000000; /* Fond noir pur */
+        background-image: url('{BRUME_URL}'); /* Image de brume */
+        background-size: cover; /* Couvre tout l'écran */
+        background-position: center; /* Centrée */
+        background-repeat: no-repeat; /* Ne se répète pas */
+        background-attachment: fixed; /* La brume reste fixe quand on scrolle */
+    }}
+
+    /* 2. TEXTE BROUILLARD DÉFILANT */
+    .brouillard-text {{
         font-family: 'Courier New', monospace;
         color: rgba(255, 255, 255, 0.6);
         font-size: 18px;
         filter: blur(1px);
         text-align: center;
-    }
-    h1, h2, h3 { color: #ffffff; text-align: center; font-family: 'Courier New'; }
-    .stForm { border: 1px solid #444; border-radius: 15px; background-color: rgba(38, 39, 48, 0.6); }
-    .stButton>button { width: 100%; background-color: #ff4b4b; color: white; font-weight: bold; border-radius: 10px; border: none; }
-    .stButton>button:hover { background-color: #ffffff; color: #ff4b4b; }
-    [data-testid="stImage"] { display: block; margin: auto; }
+        margin-top: 20px;
+    }}
+
+    /* 3. TITRES ET TEXTES */
+    h1, h2, h3 {{ color: #ffffff; text-align: center; font-family: 'Courier New'; }}
+    .stForm {{ border: 1px solid #444; border-radius: 15px; background-color: rgba(38, 39, 48, 0.8); }}
+    .stButton>button {{ width: 100%; background-color: #ff4b4b; color: white; font-weight: bold; border-radius: 10px; border: none; }}
+    .stButton>button:hover {{ background-color: #ffffff; color: #ff4b4b; }}
     
-    /* Progress bar color */
-    .stProgress > div > div > div > div { background-color: #ff4b4b; }
+    /* Centrage de l'image de bannière standard si nécessaire */
+    [data-testid="stImage"] {{ display: block; margin: auto; }}
+    
+    /* 4. PROGRESS BARS ROUGES */
+    .stProgress > div > div > div > div {{ background-color: #ff4b4b; }}
+    
+    /* Correction de couleur pour les onglets */
+    .stTabs [data-baseweb="tab-list"] {{ background-color: rgba(38, 39, 48, 0.8); border-radius: 10px; }}
+    .stTabs [data-baseweb="tab"] {{ color: #ffffff; }}
+    .stTabs [data-baseweb="tab-highlight"] {{ background-color: #ff4b4b; }}
+    
     </style>
     """, unsafe_allow_html=True)
 
-# --- INITIALISATION ---
+# --- INITIALISATION DE LA SESSION ---
 if 'connected' not in st.session_state:
     st.session_state['connected'] = False
 if 'user_pseudo' not in st.session_state:
@@ -50,12 +75,12 @@ def check_login():
     else:
         st.error("Accès refusé. La brume vous rejette.")
 
-# --- CONNEXION SHEETS ---
+# --- CONNEXION GOOGLE SHEETS ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- LOGIQUE D'AFFICHAGE ---
+# --- LOGIQUE D'AFFICHAGE PRINCIPALE ---
 if not st.session_state['connected']:
-    # PAGE DE CONNEXION
+    # PAGE DE CONNEXION SÉCURISÉE
     st.write("<h1>☁️ S A F E &nbsp; H O U S E</h1>", unsafe_allow_html=True)
     with st.form("login_form"):
         st.write("<p style='text-align: center; color: #888;'>Identifiez-vous pour entrer dans le brouillard</p>", unsafe_allow_html=True)
@@ -63,22 +88,21 @@ if not st.session_state['connected']:
         st.text_input("Mot de passe", type="password", key="password_login")
         st.form_submit_button("ENTRER", on_click=check_login)
 else:
+    # BANDEAU BANNIÈRE PLEINE LARGEUR CORRIGÉ
+    st.markdown(f"""
+        <div style="width: 100%; overflow: hidden; margin-bottom: 10px;">
+            <img src="{LOGO_URL}" style="width: 100%; height: 250px; object-fit: cover; border-radius: 10px; border: 2px solid #333;">
+        </div>
+        """, unsafe_allow_html=True)
+
     # MESSAGE DÉFILANT
     pseudo = st.session_state['user_pseudo']
     st.markdown(f'<marquee class="brouillard-text" scrollamount="5">⚠️ TRANSMISSION SÉCURISÉE ... BIENVENUE {pseudo.upper()} ... TOUT RESTE DANS LA BRUME ... ⚠️</marquee>', unsafe_allow_html=True)
 
-   # --- CONFIGURATION DE LA BANNIÈRE PLEINE LARGEUR ---
-    LOGO_URL = "https://raw.githubusercontent.com/lanieblagris/Compta-La-Niebla/main/logo.png?v=3"
-    
-    st.markdown(f"""
-        <div style="width: 100%; overflow: hidden; margin-bottom: 20px;">
-            <img src="{LOGO_URL}" style="width: 100%; height: 250px; object-fit: cover; border-radius: 10px;">
-        </div>
-        """, unsafe_allow_html=True)
-    
-    st.write(f"<p style='text-align: center; color: #ff4b4b; margin-top:-20px;'>Session active : <b>{pseudo}</b></p>", unsafe_allow_html=True)
+    # INFORMATION SESSION
+    st.write(f"<p style='text-align: center; color: #ff4b4b; margin-top:-10px; font-weight: bold;'>Session active : {pseudo}</p>", unsafe_allow_html=True)
 
-    # --- SECTION RAPPORTS ---
+    # --- SECTION RAPPORTS D'ACTIVITÉ ---
     tabs = st.tabs(["💰 ATM", "🛒 Supérette", "🏎️ Go Fast", "🏠 Cambriolage", "🌿 Drogue"])
 
     def handle_submit(action, butin=0, drogue="N/A", quantite=0):
@@ -89,8 +113,8 @@ else:
                 "Membre": st.session_state['user_pseudo'],
                 "Action": action, 
                 "Drogue": drogue, 
-                "Quantite": float(quantite), 
-                "Butin": float(butin)
+                "Quantite": float(quantite), # Forcer en nombre
+                "Butin": float(butin) # Forcer en nombre
             }])
             df = conn.read(worksheet="Rapports", ttl=0)
             updated_df = pd.concat([df, new_row], ignore_index=True)
@@ -124,61 +148,69 @@ else:
             b = st.number_input("💵 Total vente ($)", min_value=0, key="drb")
             if st.form_submit_button("TRANSMETTRE DROGUE"): handle_submit("Drogue", butin=b, drogue=d, quantite=q)
 
-  # --- TABLEAU DES OBJECTIFS (AVEC DÉPASSEMENT) ---
+    # --- TABLEAU DES OBJECTIFS HEBDOMADAIRES ---
     st.markdown("---")
     st.write("### 📊 OBJECTIFS DE LA SEMAINE")
     
     try:
+        # Lire les données fraîches
         data = conn.read(worksheet="Rapports", ttl=0)
         
         if data is not None and not data.empty:
+            # Nettoyage et conversion
             data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
             data['Quantite'] = pd.to_numeric(data['Quantite'], errors='coerce').fillna(0)
             data = data.dropna(subset=['Date'])
             
+            # Calcul du début de semaine (Lundi)
             today = datetime.datetime.now()
             start_week = (today - datetime.timedelta(days=today.weekday())).replace(hour=0, minute=0, second=0)
+            
+            # Filtrer pour la semaine actuelle
             week_data = data[data['Date'] >= start_week].copy()
 
             if not week_data.empty:
-                # Séparation Missions vs Drogue
+                # 1. Missions classiques (SAUF Drogue) -> Objectif 20
                 actions_df = week_data[week_data['Action'] != "Drogue"]
                 stats_actions = actions_df.groupby('Membre').agg({'Action': 'count'}).reset_index()
+                
+                # 2. Vente de Drogue (Uniquement Drogue) -> Objectif 300
                 stats_drogue = week_data.groupby('Membre').agg({'Quantite': 'sum'}).reset_index()
 
-                # Fusion
+                # Fusion des deux DataFrames pour l'affichage
                 stats = pd.merge(stats_actions, stats_drogue, on='Membre', how='outer').fillna(0)
 
+                # Affichage par membre
                 for _, row in stats.iterrows():
                     c1, c2, c3 = st.columns([1, 2, 2])
-                    
-                    # Nom du membre
                     c1.write(f"**{row['Membre']}**")
                     
-                    # --- CALCUL MISSIONS (OBJ: 20) ---
+                    # --- MISSIONS (OBJ: 20) ---
                     val_act = int(row['Action'])
                     diff_act = val_act - 20
                     txt_act = f"Actions: {val_act}/20"
                     if diff_act > 0:
-                        txt_act += f"  (🔥 +{diff_act})"
-                    
+                        txt_act += f" 🔥 (+{diff_act})"
                     c2.progress(min(val_act/20, 1.0), text=txt_act)
                     
-                    # --- CALCUL DROGUE (OBJ: 300) ---
+                    # --- DROGUE (OBJ: 300) ---
                     val_dro = int(row['Quantite'])
                     diff_dro = val_dro - 300
                     txt_dro = f"Drogue: {val_dro}/300"
                     if diff_dro > 0:
-                        txt_dro += f"  (💰 +{diff_dro})"
-                    
+                        txt_dro += f" 💰 (+{diff_dro})"
                     c3.progress(min(val_dro/300, 1.0), text=txt_dro)
             else:
                 st.info(f"Aucune activité pour la semaine du {start_week.strftime('%d/%m')}")
         else:
-            st.info("Tu te bouge le cul ou quoi ?")
+            st.info("Tu te bouges le cul ou quoi ?")
     except Exception as e:
         st.info("En attente de données valides...")
+
+    # --- BOUTON DE SORTIE ---
     st.markdown("---")
-    if st.button("QUITTER LA SAFE HOUSE"):
-        st.session_state['connected'] = False
-        st.rerun()
+    col_out, col_empty = st.columns([1, 3])
+    with col_out:
+        if st.button("QUITTER LA SAFE HOUSE"):
+            st.session_state['connected'] = False
+            st.rerun()
