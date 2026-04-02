@@ -7,12 +7,10 @@ import datetime
 st.set_page_config(page_title="La Niebla - Safe House", page_icon="🥷", layout="centered")
 
 # --- BASE DE DONNÉES DES MEMBRES ---
-# Format : "Nom de code": {"password": "Mdp", "pseudo": "Nom affiché dans le Sheets"}
 USERS = {
     "Admin": {"password": "0000", "pseudo": "Le Patron"},
     "Niebla": {"password": "1234", "pseudo": "Membre_Alpha"},
     "Ghost": {"password": "5678", "pseudo": "L'Ombre"},
-    # Rajoute tes membres ici sur le même modèle
 }
 
 # --- STYLE CSS ---
@@ -36,101 +34,101 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- GESTION DE LA CONNEXION ---
+# --- INITIALISATION DES VARIABLES DE SESSION ---
 if 'connected' not in st.session_state:
     st.session_state['connected'] = False
+if 'user_pseudo' not in st.session_state:
     st.session_state['user_pseudo'] = ""
 
 def check_login():
-    user_input = st.session_state["user_login"]
-    pass_input = st.session_state["password_login"]
-    
-    if user_input in USERS and USERS[user_input]["password"] == pass_input:
+    u = st.session_state["user_login"]
+    p = st.session_state["password_login"]
+    if u in USERS and USERS[u]["password"] == p:
         st.session_state['connected'] = True
-        st.session_state['user_pseudo'] = USERS[user_input]["pseudo"]
+        st.session_state['user_pseudo'] = USERS[u]["pseudo"]
     else:
         st.error("Accès refusé. La brume vous rejette.")
 
-# --- PAGE DE CONNEXION ---
+# --- LOGIQUE D'AFFICHAGE ---
+
 if not st.session_state['connected']:
+    # PAGE DE CONNEXION
     st.write("<h1>☁️ S A F E &nbsp; H O U S E</h1>", unsafe_allow_html=True)
     with st.form("login_form"):
         st.write("<p style='text-align: center; color: #888;'>Identifiez-vous pour entrer dans le brouillard</p>", unsafe_allow_html=True)
         st.text_input("Nom de code", key="user_login")
         st.text_input("Mot de passe", type="password", key="password_login")
         st.form_submit_button("ENTRER", on_click=check_login)
-    st.stop()
+else:
+    # PAGE PRINCIPALE (UNIQUEMENT SI CONNECTÉ)
+    
+    # Message défilant sécurisé
+    pseudo = st.session_state['user_pseudo']
+    st.markdown(f"""
+        <marquee class="brouillard-text" scrollamount="5" direction="left">
+            ⚠️ TRANSMISSION SÉCURISÉE ... BIENVENUE {pseudo.upper()} ... RESTEZ DISCRETS ... ⚠️
+        </marquee>
+        """, unsafe_allow_html=True)
 
-# --- SI CONNECTÉ ---
+    st.write(f"<h1>☁️ L A &nbsp; N I E B L A</h1>", unsafe_allow_html=True)
+    st.write(f"<p style='text-align: center; color: #ff4b4b;'>Session active : <b>{pseudo}</b></p>", unsafe_allow_html=True)
 
-# Message défilant
-st.markdown(f"""
-    <marquee class="brouillard-text" scrollamount="5" direction="left">
-        ⚠️ TRANSMISSION SÉCURISÉE ... BIENVENUE {st.session_state['user_pseudo'].upper()} ... RESTEZ DISCRETS ... ⚠️
-    </marquee>
-    """, unsafe_allow_html=True)
+    # Connexion Sheets
+    conn = st.connection("gsheets", type=GSheetsConnection)
+    tabs = st.tabs(["💰 ATM", "🛒 Supérette", "🏎️ Go Fast", "🏠 Cambriolage", "🌿 Drogue"])
 
-st.write(f"<h1>☁️ L A &nbsp; N I E B L A</h1>", unsafe_allow_html=True)
-st.write(f"<p style='text-align: center; color: #ff4b4b;'>Session active : <b>{st.session_state['user_pseudo']}</b></p>", unsafe_allow_html=True)
+    def handle_submit(action, butin=0, drogue="N/A", quantite=0):
+        try:
+            new_row = pd.DataFrame([{
+                "Date": datetime.datetime.now().strftime("%d/%m/%Y %H:%M"),
+                "Membre": st.session_state['user_pseudo'],
+                "Action": action,
+                "Drogue": drogue,
+                "Quantite": quantite,
+                "Butin": butin
+            }])
+            existing_data = conn.read(worksheet="Rapports", ttl=0)
+            updated_df = pd.concat([existing_data, new_row], ignore_index=True)
+            conn.update(worksheet="Rapports", data=updated_df)
+            st.snow()
+            st.success(f"Rapport de {st.session_state['user_pseudo']} archivé.")
+        except Exception as e:
+            st.error(f"Erreur : {e}")
 
-conn = st.connection("gsheets", type=GSheetsConnection)
-tabs = st.tabs(["💰 ATM", "🛒 Supérette", "🏎️ Go Fast", "🏠 Cambriolage", "🌿 Drogue"])
+    # Formulaires
+    with tabs[0]:
+        with st.form("atm"):
+            b = st.number_input("💵 Butin récolté ($)", min_value=0, key="k_b_atm")
+            if st.form_submit_button("TRANSMETTRE ATM"):
+                handle_submit("ATM", butin=b)
 
-def handle_submit(action, butin=0, drogue="N/A", quantite=0):
-    try:
-        # On récupère automatiquement le pseudo de la session
-        membre_actif = st.session_state['user_pseudo']
-        
-        new_row = pd.DataFrame([{
-            "Date": datetime.datetime.now().strftime("%d/%m/%Y %H:%M"),
-            "Membre": membre_actif,
-            "Action": action,
-            "Drogue": drogue,
-            "Quantite": quantite,
-            "Butin": butin
-        }])
-        
-        existing_data = conn.read(worksheet="Rapports", ttl=0)
-        updated_df = pd.concat([existing_data, new_row], ignore_index=True)
-        conn.update(worksheet="Rapports", data=updated_df)
-        st.snow()
-        st.success(f"Rapport de {membre_actif} archivé.")
-    except Exception as e:
-        st.error(f"Erreur : {e}")
+    with tabs[1]:
+        with st.form("sup"):
+            b = st.number_input("💵 Butin récolté ($)", min_value=0, key="k_b_sup")
+            if st.form_submit_button("TRANSMETTRE SUPERETTE"):
+                handle_submit("Supérette", butin=b)
 
-# --- FORMULAIRES (SANS CHAMP MEMBRE) ---
-with tabs[0]:
-    with st.form("atm"):
-        b = st.number_input("💵 Butin récolté ($)", min_value=0, key="k_b_atm")
-        if st.form_submit_button("TRANSMETTRE ATM"):
-            handle_submit("ATM", butin=b)
+    with tabs[2]:
+        with st.form("gf"):
+            b = st.number_input("💵 Butin récolté ($)", min_value=0, key="k_b_gf")
+            if st.form_submit_button("TRANSMETTRE GO FAST"):
+                handle_submit("Go Fast", butin=b)
 
-with tabs[1]:
-    with st.form("sup"):
-        b = st.number_input("💵 Butin récolté ($)", min_value=0, key="k_b_sup")
-        if st.form_submit_button("TRANSMETTRE SUPERETTE"):
-            handle_submit("Supérette", butin=b)
+    with tabs[3]:
+        with st.form("cam"):
+            if st.form_submit_button("TRANSMETTRE CAMBRIOLAGE"):
+                handle_submit("Cambriolage")
 
-with tabs[2]:
-    with st.form("gf"):
-        b = st.number_input("💵 Butin récolté ($)", min_value=0, key="k_b_gf")
-        if st.form_submit_button("TRANSMETTRE GO FAST"):
-            handle_submit("Go Fast", butin=b)
+    with tabs[4]:
+        with st.form("dr"):
+            d = st.text_input("🌿 Produit", placeholder="Ex: Weed...", key="k_d_dr")
+            q = st.number_input("📦 Quantité", min_value=0, key="k_q_dr")
+            b = st.number_input("💵 Total vente ($)", min_value=0, key="k_b_dr")
+            if st.form_submit_button("TRANSMETTRE DROGUE"):
+                handle_submit("Drogue", butin=b, drogue=d, quantite=q)
 
-with tabs[3]:
-    with st.form("cam"):
-        if st.form_submit_button("TRANSMETTRE CAMBRIOLAGE"):
-            handle_submit("Cambriolage")
-
-with tabs[4]:
-    with st.form("dr"):
-        d = st.text_input("🌿 Produit", placeholder="Ex: Weed...", key="k_d_dr")
-        q = st.number_input("📦 Quantité", min_value=0, key="k_q_dr")
-        b = st.number_input("💵 Total vente ($)", min_value=0, key="k_b_dr")
-        if st.form_submit_button("TRANSMETTRE DROGUE"):
-            handle_submit("Drogue", butin=b, drogue=d, quantite=q)
-
-st.markdown("---")
-if st.button("QUITTER LA SAFE HOUSE"):
-    st.session_state['connected'] = False
-    st.rerun()
+    st.markdown("---")
+    if st.button("QUITTER LA SAFE HOUSE"):
+        st.session_state['connected'] = False
+        st.session_state['user_pseudo'] = ""
+        st.rerun()
