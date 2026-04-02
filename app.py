@@ -118,48 +118,46 @@ else:
             b = st.number_input("💵 Total vente ($)", min_value=0, key="drb")
             if st.form_submit_button("TRANSMETTRE DROGUE"): handle_submit("Drogue", butin=b, drogue=d, quantite=q)
 
-    # --- TABLEAU DE SUIVI DES OBJECTIFS ---
+   # --- TABLEAU DES OBJECTIFS (VERSION CORRIGÉE) ---
     st.markdown("---")
     st.write("### 📊 OBJECTIFS DE LA SEMAINE")
     
     try:
+        # Forcer la lecture fraîche des données
         data = conn.read(worksheet="Rapports", ttl=0)
-        data['Date'] = pd.to_datetime(data['Date'])
         
-        # Calcul du début de semaine (Lundi)
-        today = datetime.datetime.now()
-        start_week = today - datetime.timedelta(days=today.weekday())
-        start_week = start_week.replace(hour=0, minute=0, second=0)
-        
-        # Filtrer
-        week_data = data[data['Date'] >= start_week]
+        if data is not None and not data.empty:
+            # Conversion de la colonne Date
+            data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
+            data = data.dropna(subset=['Date']) # On enlève les lignes sans date valide
+            
+            # Calcul du début de semaine
+            today = datetime.datetime.now()
+            start_week = (today - datetime.timedelta(days=today.weekday())).replace(hour=0, minute=0, second=0)
+            
+            # Filtrage
+            week_data = data[data['Date'] >= start_week]
 
-        # Stats par membre
-        stats = week_data.groupby('Membre').agg(
-            Actions=('Action', 'count'),
-            Drogue_Total=('Quantite', 'sum')
-        ).reset_index()
+            if not week_data.empty:
+                # Groupement
+                stats = week_data.groupby('Membre').agg({
+                    'Action': 'count',
+                    'Quantite': 'sum'
+                }).reset_index()
 
-        if not stats.empty:
-            for _, row in stats.iterrows():
-                c1, c2, c3 = st.columns([1, 2, 2])
-                c1.write(f"**{row['Membre']}**")
-                
-                # Progrès Actions (Objectif 20)
-                p_act = min(row['Actions'] / 20, 1.0)
-                c2.write(f"Actions : {row['Actions']}/20")
-                c2.progress(p_act)
-                
-                # Progrès Drogue (Objectif 300)
-                p_dro = min(row['Drogue_Total'] / 300, 1.0)
-                c3.write(f"Drogue : {row['Drogue_Total']}/300")
-                c3.progress(p_dro)
+                for _, row in stats.iterrows():
+                    c1, c2, c3 = st.columns([1, 2, 2])
+                    c1.write(f"**{row['Membre']}**")
+                    # Barre Actions (Objectif 20)
+                    val_act = int(row['Action'])
+                    c2.progress(min(val_act/20, 1.0), text=f"Actions: {val_act}/20")
+                    # Barre Drogue (Objectif 300)
+                    val_dro = int(row['Quantite'])
+                    c3.progress(min(val_dro/300, 1.0), text=f"Drogue: {val_dro}/300")
+            else:
+                st.info("Aucune donnée pour la semaine du " + start_week.strftime("%d/%m"))
         else:
-            st.info("Aucune activité enregistrée cette semaine.")
-    except:
-        st.info("Le tableau de suivi s'activera après la première saisie.")
-
-    st.markdown("---")
-    if st.button("QUITTER LA SAFE HOUSE"):
-        st.session_state['connected'] = False
-        st.rerun()
+            st.info("Le Google Sheets est vide.")
+    except Exception as e:
+        st.info("En attente de données valides...")
+        # st.write(e) # Décommenter pour voir l'erreur exacte si besoin
