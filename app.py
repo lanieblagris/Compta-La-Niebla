@@ -172,10 +172,10 @@ else:
             week_data = data[data['Date'] >= start_week].copy()
 
             if not week_data.empty:
-                # Calcul Missions
+                # Calcul Actions (Tout sauf Drogue)
                 actions_df = week_data[week_data['Action'] != "Drogue"]
                 stats_actions = actions_df.groupby('Membre').agg({'Action': 'count', 'Butin': 'sum'}).reset_index()
-                stats_actions.rename(columns={'Butin': 'Argent_Missions'}, inplace=True)
+                stats_actions.rename(columns={'Butin': 'Argent_Actions'}, inplace=True)
                 
                 # Calcul Drogue
                 drogue_df = week_data[week_data['Action'] == "Drogue"]
@@ -204,14 +204,14 @@ else:
                 df_finance = stats[['Membre', 'Argent_Actions', 'Argent_Drogue']].copy()
                 df_finance.columns = ['Membre', 'Butin Actions ($)', 'Ventes Drogue ($)']
                 
-                df_finance['Butin Missions ($)'] = df_finance['Butin Actions ($)'].apply(lambda x: f"{x:,.0f} $".replace(',', ' '))
+                df_finance['Butin Actions ($)'] = df_finance['Butin Actions ($)'].apply(lambda x: f"{x:,.0f} $".replace(',', ' '))
                 df_finance['Ventes Drogue ($)'] = df_finance['Ventes Drogue ($)'].apply(lambda x: f"{x:,.0f} $".replace(',', ' '))
                 
                 st.table(df_finance)
             else:
                 st.info("Aucune activité cette semaine.")
         else:
-            st.info("La base est vide.")
+            st.info("Tu te bouges le cul ou quoi ?")
     except Exception as e:
         st.info("En attente de données...")
 
