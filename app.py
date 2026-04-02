@@ -69,8 +69,8 @@ else:
 
     # --- LOGO (LIEN NETTOYÉ ET CORRIGÉ) ---
     # Nous utilisons le lien direct Raw pour ton fichier "logo.png"
-    LOGO_URL = "https://raw.githubusercontent.com/lanieblagris/Compta-La-Niebla/main/logo.png"
-    st.image(LOGO_URL, width=350)
+    LOGO_URL = "https://raw.githubusercontent.com/lanieblagris/Compta-La-Niebla/main/logo.png?v=3"
+    st.image(LOGO_URL, use_container_width=True)
     
     st.write(f"<p style='text-align: center; color: #ff4b4b; margin-top:-20px;'>Session active : <b>{pseudo}</b></p>", unsafe_allow_html=True)
 
