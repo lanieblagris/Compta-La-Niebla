@@ -67,10 +67,12 @@ else:
     pseudo = st.session_state['user_pseudo']
     st.markdown(f'<marquee class="brouillard-text" scrollamount="5">⚠️ TRANSMISSION SÉCURISÉE ... BIENVENUE {pseudo.upper()} ... TOUT RESTE DANS LA BRUME ... ⚠️</marquee>', unsafe_allow_html=True)
 
-    # --- LOGO (LIEN NETTOYÉ ET CORRIGÉ) ---
-    # Nous utilisons le lien direct Raw pour ton fichier "logo.png"
+    # --- LOGO BANNIÈRE (TAILLE AJUSTÉE) ---
     LOGO_URL = "https://raw.githubusercontent.com/lanieblagris/Compta-La-Niebla/main/logo.png?v=3"
-    st.image(LOGO_URL, use_container_width=True)
+    
+    # On retire "use_container_width" et on met une largeur fixe
+    # 700 ou 800 est souvent idéal pour une bannière propre
+    st.image(LOGO_URL, width=700)
     
     st.write(f"<p style='text-align: center; color: #ff4b4b; margin-top:-20px;'>Session active : <b>{pseudo}</b></p>", unsafe_allow_html=True)
 
@@ -120,7 +122,7 @@ else:
             b = st.number_input("💵 Total vente ($)", min_value=0, key="drb")
             if st.form_submit_button("TRANSMETTRE DROGUE"): handle_submit("Drogue", butin=b, drogue=d, quantite=q)
 
-  # --- TABLEAU DES OBJECTIFS (DROGUE EXCLUE DES ACTIONS) ---
+  # --- TABLEAU DES OBJECTIFS (AVEC DÉPASSEMENT) ---
     st.markdown("---")
     st.write("### 📊 OBJECTIFS DE LA SEMAINE")
     
@@ -137,35 +139,43 @@ else:
             week_data = data[data['Date'] >= start_week].copy()
 
             if not week_data.empty:
-                # 1. On sépare les actions classiques de la drogue
-                # On compte les actions qui ne sont PAS de la drogue
+                # Séparation Missions vs Drogue
                 actions_df = week_data[week_data['Action'] != "Drogue"]
                 stats_actions = actions_df.groupby('Membre').agg({'Action': 'count'}).reset_index()
-                
-                # On calcule le total de drogue pour tout le monde
                 stats_drogue = week_data.groupby('Membre').agg({'Quantite': 'sum'}).reset_index()
 
-                # Fusion des deux pour l'affichage
+                # Fusion
                 stats = pd.merge(stats_actions, stats_drogue, on='Membre', how='outer').fillna(0)
 
                 for _, row in stats.iterrows():
                     c1, c2, c3 = st.columns([1, 2, 2])
+                    
+                    # Nom du membre
                     c1.write(f"**{row['Membre']}**")
                     
-                    # Barre Actions (Objectif 20) - Ici on ne compte que ATM, Supérette, Go Fast, Cambriolage
+                    # --- CALCUL MISSIONS (OBJ: 20) ---
                     val_act = int(row['Action'])
-                    c2.progress(min(val_act/20, 1.0), text=f"Missions: {val_act}/20")
+                    diff_act = val_act - 20
+                    txt_act = f"Missions: {val_act}/20"
+                    if diff_act > 0:
+                        txt_act += f"  (🔥 +{diff_act})"
                     
-                    # Barre Drogue (Objectif 300)
+                    c2.progress(min(val_act/20, 1.0), text=txt_act)
+                    
+                    # --- CALCUL DROGUE (OBJ: 300) ---
                     val_dro = int(row['Quantite'])
-                    c3.progress(min(val_dro/300, 1.0), text=f"Drogue: {val_dro}/300")
+                    diff_dro = val_dro - 300
+                    txt_dro = f"Drogue: {val_dro}/300"
+                    if diff_dro > 0:
+                        txt_dro += f"  (💰 +{diff_dro})"
+                    
+                    c3.progress(min(val_dro/300, 1.0), text=txt_dro)
             else:
                 st.info(f"Aucune activité pour la semaine du {start_week.strftime('%d/%m')}")
         else:
             st.info("Tu te bouge le cul ou quoi ?")
     except Exception as e:
         st.info("En attente de données valides...")
-
     st.markdown("---")
     if st.button("QUITTER LA SAFE HOUSE"):
         st.session_state['connected'] = False
