@@ -67,8 +67,8 @@ else:
     pseudo = st.session_state['user_pseudo']
     st.markdown(f'<marquee class="brouillard-text" scrollamount="5">⚠️ TRANSMISSION SÉCURISÉE ... BIENVENUE {pseudo.upper()} ... TOUT RESTE DANS LA BRUME ... ⚠️</marquee>', unsafe_allow_html=True)
 
-    # LOGO
-    LOGO_URL = "https://github.com/lanieblagris/Compta-La-Niebla/blob/main/Gemini_Generated_Image_9z4bsd9z4bsd9z4b.png"
+    # LOGO (LIEN RAW CORRIGÉ)
+    LOGO_URL = "https://raw.githubusercontent.com/lanieblagris/Compta-La-Niebla/main/Gemini_Generated_Image_9z4bsd9z4bsd9z4b.png"
     st.image(LOGO_URL, width=350)
     st.write(f"<p style='text-align: center; color: #ff4b4b; margin-top:-20px;'>Session active : <b>{pseudo}</b></p>", unsafe_allow_html=True)
 
@@ -83,8 +83,8 @@ else:
                 "Membre": st.session_state['user_pseudo'],
                 "Action": action, 
                 "Drogue": drogue, 
-                "Quantite": quantite, 
-                "Butin": butin
+                "Quantite": float(quantite), 
+                "Butin": float(butin)
             }])
             df = conn.read(worksheet="Rapports", ttl=0)
             updated_df = pd.concat([df, new_row], ignore_index=True)
@@ -95,7 +95,7 @@ else:
         except Exception as e:
             st.error(f"Erreur de transmission : {e}")
 
-    # Formulaires simplifiés
+    # Formulaires
     with tabs[0]:
         with st.form("atm"):
             b = st.number_input("💵 Butin récolté ($)", min_value=0, key="atmb")
@@ -118,28 +118,26 @@ else:
             b = st.number_input("💵 Total vente ($)", min_value=0, key="drb")
             if st.form_submit_button("TRANSMETTRE DROGUE"): handle_submit("Drogue", butin=b, drogue=d, quantite=q)
 
-   # --- TABLEAU DES OBJECTIFS (VERSION CORRIGÉE) ---
+    # --- TABLEAU DES OBJECTIFS ---
     st.markdown("---")
     st.write("### 📊 OBJECTIFS DE LA SEMAINE")
     
     try:
-        # Forcer la lecture fraîche des données
         data = conn.read(worksheet="Rapports", ttl=0)
         
         if data is not None and not data.empty:
-            # Conversion de la colonne Date
+            # Nettoyage des données pour éviter les bugs de calcul
             data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
-            data = data.dropna(subset=['Date']) # On enlève les lignes sans date valide
+            data['Quantite'] = pd.to_numeric(data['Quantite'], errors='coerce').fillna(0)
+            data = data.dropna(subset=['Date'])
             
-            # Calcul du début de semaine
+            # Calcul du lundi de la semaine en cours
             today = datetime.datetime.now()
             start_week = (today - datetime.timedelta(days=today.weekday())).replace(hour=0, minute=0, second=0)
             
-            # Filtrage
             week_data = data[data['Date'] >= start_week]
 
             if not week_data.empty:
-                # Groupement
                 stats = week_data.groupby('Membre').agg({
                     'Action': 'count',
                     'Quantite': 'sum'
@@ -148,10 +146,10 @@ else:
                 for _, row in stats.iterrows():
                     c1, c2, c3 = st.columns([1, 2, 2])
                     c1.write(f"**{row['Membre']}**")
-                    # Barre Actions (Objectif 20)
+                    # Objectif 20 actions
                     val_act = int(row['Action'])
                     c2.progress(min(val_act/20, 1.0), text=f"Actions: {val_act}/20")
-                    # Barre Drogue (Objectif 300)
+                    # Objectif 300 drogue
                     val_dro = int(row['Quantite'])
                     c3.progress(min(val_dro/300, 1.0), text=f"Drogue: {val_dro}/300")
             else:
@@ -160,4 +158,8 @@ else:
             st.info("Tu te bouge le cul ou quoi ?")
     except Exception as e:
         st.info("En attente de données valides...")
-        # st.write(e) # Décommenter pour voir l'erreur exacte si besoin
+
+    st.markdown("---")
+    if st.button("QUITTER LA SAFE HOUSE"):
+        st.session_state['connected'] = False
+        st.rerun()
