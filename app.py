@@ -8,21 +8,26 @@ st.set_page_config(page_title="La Niebla - Rapports", page_icon="🥷", layout="
 st.title("🥷 Portail Officiel - La Niebla")
 st.markdown("---")
 
-# Connexion au Google Sheet
+# Connexion
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # Création des onglets
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["💰 ATM", "🛒 Supérette", "🏎️ Go Fast", "🏠 Cambriolage", "🌿 Drogue"])
+tabs = st.tabs(["💰 ATM", "🛒 Supérette", "🏎️ Go Fast", "🏠 Cambriolage", "🌿 Drogue"])
 
-# FONCTION POUR SAUVEGARDER
-def save_report(membre, action, butin=0, drogue="N/A", quantite=0):
+def handle_submit(membre, action, butin=0, drogue="N/A", quantite=0):
+    if not membre:
+        st.error("Entre ton nom !")
+        return
+
     try:
-        # On essaie de lire les données, si vide on crée la structure
-        existing_data = conn.read(worksheet="Rapports")
+        # 1. On lit les données
+        df = conn.read(worksheet="Rapports", ttl=0)
     except:
-        existing_data = pd.DataFrame(columns=["Date", "Membre", "Action", "Drogue", "Quantite", "Butin"])
-    
-    new_report = pd.DataFrame([{
+        # Si la feuille est vide, on crée les colonnes
+        df = pd.DataFrame(columns=["Date", "Membre", "Action", "Drogue", "Quantite", "Butin"])
+
+    # 2. On ajoute la nouvelle ligne
+    new_row = pd.DataFrame([{
         "Date": datetime.datetime.now().strftime("%d/%m/%Y %H:%M"),
         "Membre": membre,
         "Action": action,
@@ -31,49 +36,46 @@ def save_report(membre, action, butin=0, drogue="N/A", quantite=0):
         "Butin": butin
     }])
     
-    # Ajout de la nouvelle ligne
-    updated_df = pd.concat([existing_data, new_report], ignore_index=True)
+    updated_df = pd.concat([df, new_row], ignore_index=True)
+
+    # 3. On met à jour (On utilise la méthode simple)
     conn.update(worksheet="Rapports", data=updated_df)
     st.success(f"Rapport {action} enregistré !")
     st.balloons()
 
-# --- ATM ---
-with tab1:
-    with st.form("form_atm"):
-        m = st.text_input("Membre", placeholder="Ton pseudo RP")
-        b = st.number_input("Butin récolté ($)", min_value=0)
-        if st.form_submit_button("Valider ATM"):
-            save_report(m, "ATM", butin=b)
+# Formulaires
+with tabs[0]: # ATM
+    with st.form("atm"):
+        m = st.text_input("Membre")
+        b = st.number_input("Butin ($)", min_value=0)
+        if st.form_submit_button("Valider"):
+            handle_submit(m, "ATM", butin=b)
 
-# --- SUPERETTE ---
-with tab2:
-    with st.form("form_superette"):
-        m = st.text_input("Membre", placeholder="Ton pseudo RP")
-        b = st.number_input("Butin récolté ($)", min_value=0)
-        if st.form_submit_button("Valider Supérette"):
-            save_report(m, "Supérette", butin=b)
+with tabs[1]: # Supérette
+    with st.form("sup"):
+        m = st.text_input("Membre")
+        b = st.number_input("Butin ($)", min_value=0)
+        if st.form_submit_button("Valider"):
+            handle_submit(m, "Supérette", butin=b)
 
-# --- GO FAST ---
-with tab3:
-    with st.form("form_gofast"):
-        m = st.text_input("Membre", placeholder="Ton pseudo RP")
-        b = st.number_input("Butin récolté ($)", min_value=0)
-        if st.form_submit_button("Valider Go Fast"):
-            save_report(m, "Go Fast", butin=b)
+with tabs[2]: # Go Fast
+    with st.form("gf"):
+        m = st.text_input("Membre")
+        b = st.number_input("Butin ($)", min_value=0)
+        if st.form_submit_button("Valider"):
+            handle_submit(m, "Go Fast", butin=b)
 
-# --- CAMBRIOLAGE ---
-with tab4:
-    with st.form("form_cambriolage"):
-        m = st.text_input("Membre", placeholder="Ton pseudo RP")
-        if st.form_submit_button("Valider Cambriolage"):
-            save_report(m, "Cambriolage")
+with tabs[3]: # Cambriolage
+    with st.form("cam"):
+        m = st.text_input("Membre")
+        if st.form_submit_button("Valider"):
+            handle_submit(m, "Cambriolage")
 
-# --- DROGUE (Saisie libre) ---
-with tab5:
-    with st.form("form_drogue"):
-        m = st.text_input("Membre", placeholder="Ton pseudo RP")
-        d = st.text_input("Type de drogue", placeholder="Ex: Weed, Coke, Meth...") # Changé ici
-        q = st.number_input("Quantité vendue", min_value=0)
-        b = st.number_input("Prix de vente total ($)", min_value=0)
-        if st.form_submit_button("Valider Vente"):
-            save_report(m, "Drogue", butin=b, drogue=d, quantite=q)
+with tabs[4]: # Drogue
+    with st.form("dr"):
+        m = st.text_input("Membre")
+        d = st.text_input("Type de drogue")
+        q = st.number_input("Quantité", min_value=0)
+        b = st.number_input("Prix total ($)", min_value=0)
+        if st.form_submit_button("Valider"):
+            handle_submit(m, "Drogue", butin=b, drogue=d, quantite=q)
