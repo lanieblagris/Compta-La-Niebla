@@ -212,7 +212,7 @@ else:
             else:
                 st.info("Aucune activité cette semaine.")
         else:
-            st.info("Tu te bouges le cul ou quoi ?")
+            st.info("Allez au boulot feneant !")
     except Exception as e:
         st.info("En attente de données...")
 
