@@ -13,50 +13,58 @@ USERS = {
     "Dany": {"password": "081219", "pseudo": "Dany Smith"},
 }
 
-# --- STYLE CSS (IMMERSION TOTALE AVEC BRUME) ---
-# Nous utilisons les liens bruts (raw) pour charger les images directement.
-LOGO_URL = "https://raw.githubusercontent.com/lanieblagris/Compta-La-Niebla/main/logo.png?v=3"
-BRUME_URL = "https://raw.githubusercontent.com/lanieblagris/Compta-La-Niebla/main/brume.png?v=1"
-
-st.markdown(f"""
+# --- STYLE CSS (NOIR PUR) ---
+st.markdown("""
     <style>
-    /* 1. FOND NOIR TOTAL ET BRUME FIXE */
-    .stApp {{
-        background-color: #000000; /* Fond noir pur */
-        background-image: url('{BRUME_URL}'); /* Image de brume */
-        background-size: cover; /* Couvre tout l'écran */
-        background-position: center; /* Centrée */
-        background-repeat: no-repeat; /* Ne se répète pas */
-        background-attachment: fixed; /* La brume reste fixe quand on scrolle */
-    }}
+    /* 1. FOND NOIR TOTAL */
+    .stApp {
+        background-color: #000000; /* Noir profond */
+    }
 
     /* 2. TEXTE BROUILLARD DÉFILANT */
-    .brouillard-text {{
+    .brouillard-text {
         font-family: 'Courier New', monospace;
         color: rgba(255, 255, 255, 0.6);
         font-size: 18px;
-        filter: blur(1px);
+        filter: blur(0.5px); /* On réduit un peu le flou pour la lisibilité */
         text-align: center;
         margin-top: 20px;
-    }}
+    }
 
     /* 3. TITRES ET TEXTES */
-    h1, h2, h3 {{ color: #ffffff; text-align: center; font-family: 'Courier New'; }}
-    .stForm {{ border: 1px solid #444; border-radius: 15px; background-color: rgba(38, 39, 48, 0.8); }}
-    .stButton>button {{ width: 100%; background-color: #ff4b4b; color: white; font-weight: bold; border-radius: 10px; border: none; }}
-    .stButton>button:hover {{ background-color: #ffffff; color: #ff4b4b; }}
+    h1, h2, h3 { color: #ffffff; text-align: center; font-family: 'Courier New'; }
     
-    /* Centrage de l'image de bannière standard si nécessaire */
-    [data-testid="stImage"] {{ display: block; margin: auto; }}
+    /* Les formulaires avec un fond gris très sombre pour se détacher du noir */
+    .stForm { 
+        border: 1px solid #333; 
+        border-radius: 15px; 
+        background-color: rgba(20, 20, 20, 0.9); 
+    }
+    
+    .stButton>button { 
+        width: 100%; 
+        background-color: #ff4b4b; 
+        color: white; 
+        font-weight: bold; 
+        border-radius: 10px; 
+        border: none; 
+    }
+    
+    .stButton>button:hover { background-color: #ffffff; color: #ff4b4b; }
     
     /* 4. PROGRESS BARS ROUGES */
-    .stProgress > div > div > div > div {{ background-color: #ff4b4b; }}
+    .stProgress > div > div > div > div { background-color: #ff4b4b; }
     
-    /* Correction de couleur pour les onglets */
-    .stTabs [data-baseweb="tab-list"] {{ background-color: rgba(38, 39, 48, 0.8); border-radius: 10px; }}
-    .stTabs [data-baseweb="tab"] {{ color: #ffffff; }}
-    .stTabs [data-baseweb="tab-highlight"] {{ background-color: #ff4b4b; }}
+    /* Style des onglets */
+    .stTabs [data-baseweb="tab-list"] { background-color: #111; border-radius: 10px; }
+    .stTabs [data-baseweb="tab"] { color: #ffffff; }
     
+    /* Style du nouveau tableau financier */
+    .stTable {
+        background-color: #111;
+        color: white;
+        border-radius: 10px;
+    }
     </style>
     """, unsafe_allow_html=True)
 
