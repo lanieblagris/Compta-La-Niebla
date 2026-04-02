@@ -30,7 +30,6 @@ def handle_submit(membre, action, butin=0, drogue="N/A", quantite=0):
         return
 
     try:
-        # URL de ton Sheets (ne pas modifier)
         spreadsheet_url = "https://docs.google.com/spreadsheets/d/1DP_SfWdXadALyqUGW91wkCONK2_8asUBTnGGczmIA20/edit#gid=0"
         
         # Préparation de la ligne de données
@@ -46,12 +45,12 @@ def handle_submit(membre, action, butin=0, drogue="N/A", quantite=0):
         # Ajout direct dans le Sheets
         conn.create(spreadsheet=spreadsheet_url, worksheet="Rapports", data=new_row)
         
-        # Effet visuel "Brouillard"
+        # Effet visuel "Brouillard" (remplace les ballons)
         st.snow() 
         st.success(f"L'opération {action} a été archivée dans la brume...")
         
     except Exception as e:
-        st.error(f"Le brouillard est trop épais, erreur de connexion : {e}")
+        st.error(f"Le brouillard est trop épais, erreur : {e}")
 
 # --- FORMULAIRES ---
 
@@ -85,4 +84,8 @@ with tabs[3]: # CAMBRIOLAGE
 with tabs[4]: # DROGUE
     with st.form("dr"):
         m = st.text_input("Membre", placeholder="Ton pseudo", key="dr_m")
-        d = st.text_input("Type de produit", placeholder="Ex: Weed, Coke...",
+        d = st.text_input("Type de produit", placeholder="Ex: Weed, Coke...", key="dr_d")
+        q = st.number_input("Quantité", min_value=0, key="dr_q")
+        b = st.number_input("Total vente ($)", min_value=0, key="dr_b")
+        if st.form_submit_button("Valider Vente"):
+            handle_submit(m, "Drogue", butin=b, drogue=d, quantite=q)
