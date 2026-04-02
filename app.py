@@ -190,7 +190,7 @@ else:
                     c1.write(f"**{row['Membre']}**")
                     
                     val_act = int(row['Action'])
-                    txt_act = f"Missions: {val_act}/20"
+                    txt_act = f"Actions: {val_act}/20"
                     if val_act > 20: txt_act += f" 🔥 (+{val_act-20})"
                     c2.progress(min(val_act/20, 1.0), text=txt_act)
                     
@@ -201,10 +201,10 @@ else:
 
                 # TABLEAU FINANCIER
                 st.write("#### 💸 Récapitulatif des Gains")
-                df_finance = stats[['Membre', 'Argent_Missions', 'Argent_Drogue']].copy()
-                df_finance.columns = ['Membre', 'Butin Missions ($)', 'Ventes Drogue ($)']
+                df_finance = stats[['Membre', 'Argent_Actions', 'Argent_Drogue']].copy()
+                df_finance.columns = ['Membre', 'Butin Actions ($)', 'Ventes Drogue ($)']
                 
-                df_finance['Butin Missions ($)'] = df_finance['Butin Missions ($)'].apply(lambda x: f"{x:,.0f} $".replace(',', ' '))
+                df_finance['Butin Missions ($)'] = df_finance['Butin Actions ($)'].apply(lambda x: f"{x:,.0f} $".replace(',', ' '))
                 df_finance['Ventes Drogue ($)'] = df_finance['Ventes Drogue ($)'].apply(lambda x: f"{x:,.0f} $".replace(',', ' '))
                 
                 st.table(df_finance)
