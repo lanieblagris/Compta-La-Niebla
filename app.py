@@ -65,7 +65,7 @@ else:
     st.markdown(f'<marquee class="brouillard-text" scrollamount="5">⚠️ TRANSMISSION SÉCURISÉE ... BIENVENUE {pseudo.upper()} ... ⚠️</marquee>', unsafe_allow_html=True)
 
     # LOGO (CORRIGÉ SANS ERREUR D'INDENTATION)
-    LOGO_URL = "https://raw.githubusercontent.com/lanieblagris/Compta-La-Niebla/main/Gemini_Generated_Image_9z4bsd9z4bsd9z4b.png"
+    LOGO_URL = "https://raw.githubusercontent.com/lanieblagris/Compta-La-Niebla/main/logo.png"
     st.image(LOGO_URL, width=350)
     st.write(f"<p style='text-align: center; color: #ff4b4b; margin-top:-20px;'>Session active : <b>{pseudo}</b></p>", unsafe_allow_html=True)
 
