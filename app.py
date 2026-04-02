@@ -10,7 +10,7 @@ st.set_page_config(page_title="La Niebla - Safe House", page_icon="🥷", layout
 USERS = {
     "Admin": {"password": "0000", "pseudo": "Le Patron"},
     "Alex": {"password": "1234", "pseudo": "Alex Smith"},
-    "Dany": {"password": "5678", "pseudo": "Dany Smith"},
+    "Dany": {"password": "081219", "pseudo": "Dany Smith"},
 }
 
 # --- STYLE CSS (Immersif) ---
