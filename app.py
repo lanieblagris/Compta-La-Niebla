@@ -5,27 +5,33 @@ import datetime
 
 st.set_page_config(page_title="La Niebla - Rapports", page_icon="🥷", layout="centered")
 
+# Style personnalisé pour l'ambiance "Brouillard"
+st.markdown("""
+    <style>
+    .stApp {
+        background-color: #0e1117;
+    }
+    .report-text {
+        color: #d1d1d1;
+        font-style: italic;
+    }
+    </style>
+    """, unsafe_content_label=True)
+
 st.title("🥷 Portail Officiel - La Niebla")
 st.markdown("---")
 
-# Connexion forcée via les Secrets
 conn = st.connection("gsheets", type=GSheetsConnection)
-
 tabs = st.tabs(["💰 ATM", "🛒 Supérette", "🏎️ Go Fast", "🏠 Cambriolage", "🌿 Drogue"])
 
 def handle_submit(membre, action, butin=0, drogue="N/A", quantite=0):
     if not membre:
-        st.error("Pseudo manquant !")
+        st.error("L'ombre n'a pas de nom... Entre ton pseudo.")
         return
 
     try:
-        # ON FORCE L'OUVERTURE AVEC L'URL PRÉCISE POUR ÉVITER LE "NOT FOUND"
         spreadsheet_url = "https://docs.google.com/spreadsheets/d/1DP_SfWdXadALyqUGW91wkCONK2_8asUBTnGGczmIA20/edit#gid=0"
         
-        # Lecture (ttl=0 pour éviter le cache)
-        df = conn.read(spreadsheet=spreadsheet_url, worksheet="Rapports", ttl=0)
-        
-        # Nouveau rapport
         new_row = pd.DataFrame([{
             "Date": datetime.datetime.now().strftime("%d/%m/%Y %H:%M"),
             "Membre": membre,
@@ -35,15 +41,15 @@ def handle_submit(membre, action, butin=0, drogue="N/A", quantite=0):
             "Butin": butin
         }])
         
-        updated_df = pd.concat([df, new_row], ignore_index=True)
-
-        # Écriture forcée sur l'URL
-        conn.update(spreadsheet=spreadsheet_url, worksheet="Rapports", data=updated_df)
+        # Enregistrement
+        conn.create(spreadsheet=spreadsheet_url, worksheet="Rapports", data=new_row)
         
-        st.success(f"Rapport {action} enregistré dans le Sheets !")
-        st.balloons()
+        # Effet visuel : Brouillard (Snow détourné)
+        st.snow() 
+        st.success(f"L'opération {action} a été archivée dans la brume...")
+        
     except Exception as e:
-        st.error(f"Détail de l'erreur : {e}")
+        st.error(f"Le brouillard est trop épais, erreur : {e}")
 
 # --- FORMULAIRES ---
 with tabs[0]:
