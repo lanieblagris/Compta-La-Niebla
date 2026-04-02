@@ -212,10 +212,9 @@ else:
             else:
                 st.info("Aucune activité cette semaine.")
         else:
-            st.info("Allez au boulot feneant!")
+            st.info("La base est vide.")
     except Exception as e:
         st.info("En attente de données...")
-
     st.markdown("---")
     if st.button("QUITTER LA SAFE HOUSE"):
         st.session_state['connected'] = False
