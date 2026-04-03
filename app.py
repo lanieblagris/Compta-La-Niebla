@@ -11,40 +11,6 @@ st.set_page_config(page_title="La Niebla - FlashBack FA", page_icon="🥷", layo
 VIDEO_URL = "https://assets.mixkit.co/videos/preview/mixkit-mysterious-pale-fog-moving-slowly-over-the-ground-44130-large.mp4"
 
 # --- 3. STYLE CSS "LOS SANTOS" & TITRE ---
-st.markdown("""
-<style>
-
-/* Fond principal /
-.stApp {
-    background: linear-gradient(180deg, #0a0a0a 0%, #111 100%);
-    overflow: hidden;
-}
-
-/ Brume animée /
-.stApp::before {
-    content: "";
-    position: fixed;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: url("https://i.imgur.com/8IhQKpR.png"); / texture de fumée /
-    background-size: cover;
-    opacity: 0.8;
-    animation: fogMove 60s linear infinite;
-    z-index: 0;
-}
-
-/ Animation */
-@keyframes fogMove {
-    0% { transform: translate(0, 0); }
-    50% { transform: translate(10%, 5%); }
-    100% { transform: translate(0, 0); }
-}
-
-</style>
-""", unsafe_allow_html=True)
-
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap');
@@ -56,6 +22,28 @@ st.markdown(f"""
 
     body {{
         background-color: #000000;
+    }}
+
+    /* Brume animée */
+    .stApp::before {{
+        content: "";
+        position: fixed;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: url("https://i.imgur.com/8IhQKpR.png");
+        background-size: cover;
+        opacity: 0.15;
+        animation: fogMove 60s linear infinite;
+        z-index: -1;
+        pointer-events: none;
+    }}
+
+    @keyframes fogMove {{
+        0% {{ transform: translate(0, 0); }}
+        50% {{ transform: translate(5%, 2%); }}
+        100% {{ transform: translate(0, 0); }}
     }}
 
     /* TITRE STYLE GTA LOS SANTOS */
@@ -78,7 +66,7 @@ st.markdown(f"""
         min-width: 100%;
         min-height: 100%;
         z-index: -1000;
-        filter: brightness(0.3);
+        filter: brightness(0.25);
         object-fit: cover;
     }}
 
@@ -176,7 +164,7 @@ else:
                 conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_op], ignore_index=True))
                 
                 st.success("Transmis avec succès.")
-                time.sleep(1) # Pause pour stabiliser GSheets
+                time.sleep(1.5) 
                 st.rerun() 
             except Exception as e: 
                 st.error(f"Erreur de connexion : {e}")
@@ -249,13 +237,16 @@ else:
                     df_c = conn.read(worksheet="Tresorerie", ttl=0)
                     conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_op], ignore_index=True))
                     st.success("Opération validée.")
-                    time.sleep(1)
+                    time.sleep(1.5)
                     st.rerun()
                 except: st.error("Erreur d'accès à l'onglet 'Tresorerie'.")
 
         st.markdown("---")
         try:
             df_all = conn.read(worksheet="Tresorerie", ttl=0)
+            # Nettoyage des données vides pour éviter les erreurs de calcul
+            df_all = df_all.dropna(subset=['Montant', 'Type', 'Etat'])
+            
             if not df_all.empty:
                 # Calculs Propre
                 rec_p = df_all[(df_all['Type']=="Recette") & (df_all['Etat']=="Propre")]['Montant'].sum()
