@@ -81,30 +81,46 @@ else:
 
         def handle_submit(action, butin=0, drogue="N/A", quantite=0):
             try:
-                # Tout butin entrant par les membres est marqué comme "Argent Sale"
+                # Envoi invisible en "Argent Sale"
                 new_row = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Membre": st.session_state['user_pseudo'], "Action": action, "Drogue": drogue, "Quantite": float(quantite), "Butin": float(butin), "Type_Argent": "Sale"}])
                 df = conn.read(worksheet="Rapports", ttl=0)
                 conn.update(worksheet="Rapports", data=pd.concat([df, new_row], ignore_index=True))
                 
-                # Mise à jour automatique de la trésorerie sale
+                # Mise à jour auto de la trésorerie sale (Admin uniquement voit l'état)
                 df_c = conn.read(worksheet="Tresorerie", ttl=0)
                 new_op = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Recette", "Catégorie": f"Action: {action}", "Montant": float(butin), "Note": f"Rapport de {st.session_state['user_pseudo']}", "Etat": "Sale"}])
                 conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_op], ignore_index=True))
                 
                 st.snow()
                 st.rerun() 
-            except: st.error("Erreur de synchronisation.")
+            except: st.error("Erreur réseau.")
 
         with tabs[0]:
             with st.form("atm"):
-                b = st.number_input("💵 Butin ($) - ARGENT SALE", min_value=0, key="b1")
+                b = st.number_input("💵 Butin ($)", min_value=0, key="b1")
                 if st.form_submit_button("VALIDER ATM"): handle_submit("ATM", butin=b)
+        
+        with tabs[1]:
+            with st.form("sup"):
+                b = st.number_input("💵 Butin ($)", min_value=0, key="b2")
+                if st.form_submit_button("VALIDER SUPERETTE"): handle_submit("Supérette", butin=b)
+
+        with tabs[2]:
+            with st.form("gf"):
+                b = st.number_input("💵 Butin ($)", min_value=0, key="b3")
+                if st.form_submit_button("VALIDER GO FAST"): handle_submit("Go Fast", butin=b)
+        
+        with tabs[3]:
+            with st.form("cam"):
+                st.write("Valider le cambriolage effectué.")
+                if st.form_submit_button("CONFIRMER CAMBRIOLAGE"): handle_submit("Cambriolage")
+
         with tabs[4]:
             with st.form("dr"):
                 d = st.text_input("🌿 Produit")
                 q = st.number_input("📦 Quantité", min_value=0)
-                b = st.number_input("💵 Vente ($) - ARGENT SALE", min_value=0)
-                if st.form_submit_button("VALIDER DROGUE"): handle_submit("Drogue", butin=b, drogue=d, quantite=q)
+                b = st.number_input("💵 Vente totale ($)", min_value=0)
+                if st.form_submit_button("VALIDER VENTE"): handle_submit("Drogue", butin=b, drogue=d, quantite=q)
 
         # STATS HEBDO (Inchangé)
         st.markdown("---")
@@ -129,23 +145,21 @@ else:
     elif choice == "Comptabilité Globale":
         st.markdown('<div class="gta-title" style="font-size:50px;">Tresorerie</div>', unsafe_allow_html=True)
         
-        # FORMULAIRE ADMIN AVEC OPTION SALE/PROPRE
         with st.form("compta_form"):
-            st.write("#### Gestion des Fonds")
+            st.write("#### Gestion du Blanchiment & Coffres")
             c1, c2, c3, c4 = st.columns(4)
-            t_type = c1.selectbox("Type", ["Recette", "Dépense", "Blanchiment"])
-            t_etat = c2.selectbox("Source/Cible", ["Sale", "Propre"])
+            t_type = c1.selectbox("Type d'opération", ["Recette", "Dépense", "Blanchiment"])
+            t_etat = c2.selectbox("Coffre concerné", ["Sale", "Propre"])
             t_montant = c3.number_input("Montant ($)", min_value=0)
             t_cat = c4.text_input("Catégorie")
-            t_note = st.text_area("Note (Ex: Blanchi 100k avec 20% de taxe)")
+            t_note = st.text_area("Justification / Note de blanchiment")
             
-            if st.form_submit_button("Enregistrer l'opération"):
+            if st.form_submit_button("EXECUTER L'OPÉRATION"):
                 try:
                     df_c = conn.read(worksheet="Tresorerie", ttl=0)
-                    # Si blanchiment : on retire du sale et on ajoute au propre (fait manuellement ici)
                     new_op = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": t_type, "Catégorie": t_cat, "Montant": float(t_montant), "Note": t_note, "Etat": t_etat}])
                     conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_op], ignore_index=True))
-                    st.success("Transaction enregistrée.")
+                    st.success("Mise à jour des comptes effectuée.")
                     st.rerun()
                 except: st.error("Erreur GSheets.")
 
@@ -153,17 +167,15 @@ else:
         try:
             df_all = conn.read(worksheet="Tresorerie", ttl=0)
             if not df_all.empty:
-                # CALCUL DES DEUX COFFRES
                 sale_rec = df_all[(df_all['Type']=="Recette") & (df_all['Etat']=="Sale")]['Montant'].sum()
                 sale_dep = df_all[(df_all['Type']=="Dépense") & (df_all['Etat']=="Sale")]['Montant'].sum()
-                
                 propre_rec = df_all[(df_all['Type']=="Recette") & (df_all['Etat']=="Propre")]['Montant'].sum()
                 propre_dep = df_all[(df_all['Type']=="Dépense") & (df_all['Etat']=="Propre")]['Montant'].sum()
 
                 m1, m2 = st.columns(2)
-                m1.metric("🔴 COFFRE SALE (À Blanchir)", f"{sale_rec - sale_dep:,.0f} $")
-                m2.metric("🟢 COFFRE PROPRE (Légal)", f"{propre_rec - propre_dep:,.0f} $")
+                m1.metric("🔴 ARGENT SALE À TRAITER", f"{sale_rec - sale_dep:,.0f} $")
+                m2.metric("🟢 ARGENT PROPRE DISPONIBLE", f"{propre_rec - propre_dep:,.0f} $")
                 
-                st.write("#### Historique des Flux")
+                st.write("#### Journal des transactions")
                 st.dataframe(df_all.sort_values(by="Date", ascending=False), use_container_width=True)
-        except: st.warning("Ajoutez une colonne 'Etat' dans votre onglet 'Tresorerie' sur Google Sheets.")
+        except: st.warning("Vérifiez les colonnes 'Etat' et 'Type' sur GSheets.")
