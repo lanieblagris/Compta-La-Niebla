@@ -31,7 +31,7 @@ st.markdown("""
     }
     .foglayer {
         position: absolute; height: 100%; width: 200%;
-        background: url("https://raw.githubusercontent.com/Anemolo/Fog-Effect/master/fog1.png") repeat-x;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
         background-size: contain;
     }
     #layer1 { animation: fogmove 30s linear infinite; opacity: 0.3; }
