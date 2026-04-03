@@ -4,6 +4,107 @@ import pandas as pd
 import datetime
 import time
 
+st.set_page_config(page_title="La Niebla", layout="wide")
+
+STYLE GLOBAL
+st.markdown("""
+<style>
+
+/* Fond global /
+.stApp {
+    background: radial-gradient(circle at center, #0a0a0a 0%, #000000 100%);
+    overflow: hidden;
+}
+
+/ Brume animée /
+#fog {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 120%;
+    height: 120%;
+    background-image: url("https://i.gifer.com/7VE.gif");
+    background-size: cover;
+    opacity: 0.08;
+    z-index: 0;
+    animation: fogMove 120s linear infinite;
+}
+
+@keyframes fogMove {
+    0% { transform: translate(0, 0); }
+    50% { transform: translate(-5%, -3%); }
+    100% { transform: translate(0, 0); }
+}
+
+/ Contenu au-dessus /
+.main {
+    position: relative;
+    z-index: 1;
+}
+
+/ Titre /
+h1 {
+    text-align: center;
+    font-family: "Georgia", serif;
+    color: #ffffff;
+    font-size: 70px;
+    letter-spacing: 3px;
+    text-shadow: 0 0 15px rgba(255,255,255,0.2);
+}
+
+/ Sous-texte RP /
+.subtitle {
+    text-align: center;
+    color: #888;
+    font-size: 14px;
+    margin-bottom: 40px;
+    letter-spacing: 2px;
+}
+
+/ Inputs /
+.stTextInput input {
+    background-color: #1a1a1a;
+    border: 1px solid #333;
+    color: white;
+    border-radius: 8px;
+}
+
+/ Bouton /
+.stButton button {
+    background-color: transparent;
+    border: 1px solid #444;
+    color: white;
+    padding: 10px 25px;
+    border-radius: 8px;
+    transition: 0.3s;
+}
+
+.stButton button:hover {
+    border: 1px solid #888;
+    box-shadow: 0 0 10px rgba(255,255,255,0.2);
+}
+
+/ Supprimer footer Streamlit */
+footer {visibility: hidden;}
+#MainMenu {visibility: hidden;}
+
+</style>
+
+<div id="fog"></div>
+
+""", unsafe_allow_html=True)
+
+CONTENU RP
+st.markdown("<h1>La Niebla</h1>", unsafe_allow_html=True)
+st.markdown('<div class="subtitle">EN EL SILENCIO, MANDAMOS</div>', unsafe_allow_html=True)
+
+st.markdown("---")
+
+code = st.text_input("Nom de code")
+password = st.text_input("Mot de passe", type="password")
+
+st.button("S'INFILTRER")
+
 # --- 1. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="La Niebla - FlashBack FA", page_icon="🥷", layout="wide")
 
