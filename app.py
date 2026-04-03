@@ -5,7 +5,7 @@ import datetime
 import time
 
 # --- 1. CONFIGURATION DE LA PAGE ---
-st.set_page_config(page_title="La Niebla - Safe House", page_icon="🥷", layout="wide")
+st.set_page_config(page_title="La Niebla - FlashBack FA", page_icon="🥷", layout="wide")
 
 # --- 2. LIEN DE LA VIDÉO (FONCTIONNEL) ---
 VIDEO_URL = "https://assets.mixkit.co/videos/preview/mixkit-mysterious-pale-fog-moving-slowly-over-the-ground-44130-large.mp4"
