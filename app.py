@@ -7,15 +7,15 @@ import time
 # --- 1. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="La Niebla - FlashBack FA", page_icon="🥷", layout="wide")
 
-# --- 2. LIEN DE LA VIDÉO (FONCTIONNEL) ---
-VIDEO_URL = "https://fr.pikbest.com/video/smoke-fog-loop-overlay-animation-video-transparent-background-with-alpha-channel_9172106.html"
+# --- 2. LIEN DE LA VIDÉO (LIEN DIRECT OBLIGATOIRE) ---
+VIDEO_URL = "https://assets.mixkit.co/videos/preview/mixkit-mysterious-pale-fog-moving-slowly-over-the-ground-44130-large.mp4"
 
-# --- 3. STYLE CSS "LOS SANTOS" & TITRE ---
+# --- 3. STYLE CSS NETTOYÉ (SANS ANCIENNE BRUME) ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap');
 
-    /* Transparence des éléments Streamlit */
+    /* Nettoyage du fond Streamlit */
     .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], .main {{
         background: transparent !important;
     }}
@@ -24,29 +24,7 @@ st.markdown(f"""
         background-color: #000000;
     }}
 
-    /* Brume animée */
-    .stApp::before {{
-        content: "";
-        position: fixed;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: url("https://i.imgur.com/8IhQKpR.png");
-        background-size: cover;
-        opacity: 0.15;
-        animation: fogMove 60s linear infinite;
-        z-index: -1;
-        pointer-events: none;
-    }}
-
-    @keyframes fogMove {{
-        0% {{ transform: translate(0, 0); }}
-        50% {{ transform: translate(5%, 2%); }}
-        100% {{ transform: translate(0, 0); }}
-    }}
-
-    /* TITRE STYLE GTA LOS SANTOS */
+    /* TITRE STYLE GTA */
     .gta-title {{
         font-family: 'UnifrakturMaguntia', cursive;
         font-size: 85px;
@@ -58,7 +36,7 @@ st.markdown(f"""
         letter-spacing: 3px;
     }}
 
-    /* CONFIGURATION VIDÉO FOND */
+    /* VIDÉO DE FOND (Remplace la brume buggée) */
     #bgVideo {{
         position: fixed;
         right: 0;
@@ -66,11 +44,11 @@ st.markdown(f"""
         min-width: 100%;
         min-height: 100%;
         z-index: -1000;
-        filter: brightness(0.25);
+        filter: brightness(0.3);
         object-fit: cover;
     }}
 
-    /* STYLE DES ÉLÉMENTS UI */
+    /* INTERFACE SOMBRE */
     .stForm {{ 
         background-color: rgba(10, 10, 10, 0.85) !important; 
         border: 1px solid #444 !important;
@@ -86,7 +64,6 @@ st.markdown(f"""
         background-color: rgba(0, 0, 0, 0.9) !important;
     }}
 
-    /* Fix visibilité metrics */
     [data-testid="stMetricValue"] {{ color: white !important; }}
     [data-testid="stMetricLabel"] {{ color: #bbb !important; }}
     </style>
@@ -153,33 +130,33 @@ else:
 
         def handle_submit(action, butin=0, drogue="N/A", quantite=0):
             try:
-                # 1. Mise à jour Rapports
+                # 1. Rapports
                 new_row = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Membre": st.session_state['user_pseudo'], "Action": action, "Drogue": drogue, "Quantite": float(quantite), "Butin": float(butin)}])
                 df = conn.read(worksheet="Rapports", ttl=0)
                 conn.update(worksheet="Rapports", data=pd.concat([df, new_row], ignore_index=True))
                 
-                # 2. Mise à jour Trésorerie (Automatiquement en Sale)
+                # 2. Trésorerie (Sale par défaut)
                 df_c = conn.read(worksheet="Tresorerie", ttl=0)
                 new_op = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Recette", "Etat": "Sale", "Catégorie": action, "Montant": float(butin), "Note": f"Rapport de {st.session_state['user_pseudo']}"}])
                 conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_op], ignore_index=True))
                 
-                st.success("Transmis avec succès.")
-                time.sleep(1.5) 
+                st.success("Données enregistrées.")
+                time.sleep(1)
                 st.rerun() 
             except Exception as e: 
-                st.error(f"Erreur de connexion : {e}")
+                st.error(f"Erreur GSheets : {e}")
 
         with tabs[0]:
             with st.form("atm"):
-                b = st.number_input("💵 Butin ($)", min_value=0, key="b1")
+                b = st.number_input("💵 Butin ($)", min_value=0, key="atm_b")
                 if st.form_submit_button("VALIDER ATM"): handle_submit("ATM", butin=b)
         with tabs[1]:
             with st.form("sup"):
-                b = st.number_input("💵 Butin ($)", min_value=0, key="b2")
+                b = st.number_input("💵 Butin ($)", min_value=0, key="sup_b")
                 if st.form_submit_button("VALIDER SUPERETTE"): handle_submit("Supérette", butin=b)
         with tabs[2]:
             with st.form("gf"):
-                b = st.number_input("💵 Butin ($)", min_value=0, key="b3")
+                b = st.number_input("💵 Butin ($)", min_value=0, key="gf_b")
                 if st.form_submit_button("VALIDER GO FAST"): handle_submit("Go Fast", butin=b)
         with tabs[3]:
             with st.form("cam"):
@@ -193,7 +170,7 @@ else:
 
         # STATS HEBDO
         st.markdown("---")
-        st.write("### 📊 STATISTIQUES HEBDOMADAIRES")
+        st.write("### 📊 STATISTIQUES DE LA SEMAINE")
         try:
             data = conn.read(worksheet="Rapports", ttl=0)
             if data is not None and not data.empty:
@@ -210,13 +187,6 @@ else:
                         c1.write(f"**{row['Membre']}**")
                         c2.progress(min(int(row['Action'])/20, 1.0), text=f"Actions: {int(row['Action'])}")
                         c3.progress(min(int(row['Quantite'])/300, 1.0), text=f"Drogue: {int(row['Quantite'])}")
-                    
-                    st.write("#### 💸 RÉCAPITULATIF FINANCIER")
-                    df_recap = stats[['Membre', 'Butin_x', 'Butin_y']].copy()
-                    df_recap.columns = ['Membre', 'Actions ($)', 'Drogue ($)']
-                    df_recap['Actions ($)'] = df_recap['Actions ($)'].apply(lambda x: f"{int(x):,.0f} $".replace(',', ' '))
-                    df_recap['Drogue ($)'] = df_recap['Drogue ($)'].apply(lambda x: f"{int(x):,.0f} $".replace(',', ' '))
-                    st.table(df_recap)
         except: pass
 
     # --- PAGE 2 : COMPTABILITÉ GLOBALE ---
@@ -228,30 +198,26 @@ else:
             c1, c2, c3, c4 = st.columns(4)
             t_type = c1.selectbox("Type", ["Recette", "Dépense"])
             t_etat = c2.selectbox("Argent", ["Sale", "Propre"])
-            t_cat = c3.text_input("Catégorie (Loyer, Armes, Véhicules...)")
+            t_cat = c3.text_input("Catégorie")
             t_montant = c4.number_input("Montant ($)", min_value=0)
             t_note = st.text_area("Note / Justification")
             if st.form_submit_button("Enregistrer l'opération"):
                 try:
-                    new_op = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": t_type, "Etat": t_etat, "Catégorie": t_cat, "Montant": float(t_montant), "Note": t_note}])
                     df_c = conn.read(worksheet="Tresorerie", ttl=0)
+                    new_op = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": t_type, "Etat": t_etat, "Catégorie": t_cat, "Montant": float(t_montant), "Note": t_note}])
                     conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_op], ignore_index=True))
                     st.success("Opération validée.")
-                    time.sleep(1.5)
+                    time.sleep(1)
                     st.rerun()
-                except: st.error("Erreur d'accès à l'onglet 'Tresorerie'.")
+                except: st.error("Erreur de mise à jour.")
 
         st.markdown("---")
         try:
             df_all = conn.read(worksheet="Tresorerie", ttl=0)
-            # Nettoyage des données vides pour éviter les erreurs de calcul
-            df_all = df_all.dropna(subset=['Montant', 'Type', 'Etat'])
-            
             if not df_all.empty:
-                # Calculs Propre
+                # Calculs Solde
                 rec_p = df_all[(df_all['Type']=="Recette") & (df_all['Etat']=="Propre")]['Montant'].sum()
                 dep_p = df_all[(df_all['Type']=="Dépense") & (df_all['Etat']=="Propre")]['Montant'].sum()
-                # Calculs Sale
                 rec_s = df_all[(df_all['Type']=="Recette") & (df_all['Etat']=="Sale")]['Montant'].sum()
                 dep_s = df_all[(df_all['Type']=="Dépense") & (df_all['Etat']=="Sale")]['Montant'].sum()
 
@@ -261,4 +227,4 @@ else:
                 m3.metric("TOTAL GLOBAL", f"{(rec_p + rec_s) - (dep_p + dep_s):,.0f} $")
                 
                 st.dataframe(df_all.sort_values(by="Date", ascending=False), use_container_width=True)
-        except: st.warning("Vérifiez l'onglet 'Tresorerie' (Colonnes: Date, Type, Etat, Catégorie, Montant, Note).")
+        except: pass
