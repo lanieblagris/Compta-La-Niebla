@@ -117,7 +117,7 @@ else:
                 if st.form_submit_button("VALIDER CAMBRIOLAGE"): handle_submit("Cambriolage")
         with tabs[4]:
             with st.form("dr"):
-                d = st.selectbox("🌿 Produit", ["Marijuana", "Cocaine", "Meth", "Heroine", "Autre"])
+                d = st.selectbox("🌿 Produit", ["Marijuana", "Cocaine", "Meth", "Heroine", "Crack", "Carte prepaye", "Tranq"])
                 q = st.number_input("📦 Quantité vendue", min_value=0.0)
                 b = st.number_input("💵 Prix de vente ($)", min_value=0)
                 # ICI : On envoie la quantité en NÉGATIF pour la déduire du stock
