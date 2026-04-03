@@ -197,7 +197,7 @@ else:
             with st.form("add_stock"):
                 st.write("➕ AJOUTER UN ARRIVAGE (Récolte / Achat)")
                 c1, c2 = st.columns(2)
-                d_name = c1.selectbox("Produit", ["Marijuana", "Cocaine", "Meth", "Heroine", "Autre"])
+                d_name = c1.selectbox("Produit", ["Marijuana", "Cocaine", "Meth", "Heroine", "Crack", "Carte prepaye", "Tranq"])
                 d_qty = c2.number_input("Quantité à ajouter (+)", min_value=0.0)
                 if st.form_submit_button("VALIDER L'ARRIVAGE"):
                     # ICI : On enregistre en POSITIF pour augmenter le stock
