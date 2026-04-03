@@ -30,7 +30,7 @@ st.markdown("""
     height: 200%;
     background: url("https://i.imgur.com/8IhQKpR.png"); / texture de fumée /
     background-size: cover;
-    opacity: 0.15;
+    opacity: 0.8;
     animation: fogMove 60s linear infinite;
     z-index: 0;
 }
