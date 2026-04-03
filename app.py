@@ -13,45 +13,48 @@ USERS = {
     "Dany": {"password": "081219", "pseudo": "Dany Smith"},
 }
 
-# --- 3. STYLE CSS GLOBAL (BRUME + NOIR) ---
+# --- STYLE CSS GLOBAL (FORÇAGE TRANSPARENCE + BRUME) ---
 st.markdown("""
     <style>
-    /* Fond noir et transparence des éléments Streamlit pour voir la brume */
-    .stApp { background-color: #000000 !important; }
-    [data-testid="stHeader"] { background: rgba(0,0,0,0); }
-    .main { background: rgba(0,0,0,0); }
+    /* 1. ON FORCE LA TRANSPARENCE PARTOUT POUR VOIR DERRIÈRE */
+    .stApp, .main, [data-testid="stHeader"], [data-testid="stAppViewContainer"], [data-testid="stCanvas"] {
+        background-color: rgba(0,0,0,0) !important;
+    }
     
-    /* ANIMATION DE LA BRUME */
+    /* Fond de secours noir tout au fond */
+    html { background-color: #000000; }
+
+    /* 2. L'ANIMATION DE LA BRUME */
     .fogwrapper {
         height: 100%; position: fixed; top: 0; left: 0; width: 100%;
-        -webkit-filter: blur(1px); filter: blur(1px); z-index: 0;
-        pointer-events: none; /* Permet de cliquer sur les boutons à travers la brume */
+        filter: blur(1px); z-index: -1; /* Z-INDEX négatif pour être derrière tout */
+        pointer-events: none;
     }
     #foglayer_01, #foglayer_02, #foglayer_03 { height: 100%; position: absolute; width: 200%; }
     .image01, .image02 {
         float: left; height: 100%; width: 50%;
         background: url("https://raw.githubusercontent.com/Anemolo/Fog-Effect/master/fog1.png") center center / cover no-repeat transparent;
     }
-    #foglayer_01 { -webkit-animation: foglayer_01_opacity 10s linear infinite, foglayer_moveme 15s linear infinite; animation: foglayer_01_opacity 10s linear infinite, foglayer_moveme 15s linear infinite; }
-    #foglayer_02 { -webkit-animation: foglayer_02_opacity 15s linear infinite, foglayer_moveme 13s linear infinite; animation: foglayer_02_opacity 15s linear infinite, foglayer_moveme 13s linear infinite; }
     
-    @-webkit-keyframes foglayer_moveme { 0% { left: 0; } 100% { left: -100%; } }
-    @keyframes foglayer_moveme { 0% { left: 0; } 100% { left: -100%; } }
-    @-webkit-keyframes foglayer_01_opacity { 0% { opacity: .1; } 22% { opacity: .5; } 40% { opacity: .2; } 100% { opacity: .1; } }
-    @keyframes foglayer_01_opacity { 0% { opacity: .1; } 22% { opacity: .5; } 40% { opacity: .2; } 100% { opacity: .1; } }
+    /* Mouvements */
+    #foglayer_01 { animation: fogmove 20s linear infinite; }
+    #foglayer_02 { animation: fogmove 35s linear infinite; opacity: 0.4; }
+    
+    @keyframes fogmove {
+        from { left: 0; }
+        to { left: -100%; }
+    }
 
-    /* UI ELEMENTS */
-    .brouillard-text { font-family: 'Courier New', monospace; color: rgba(255, 255, 255, 0.6); font-size: 18px; text-align: center; }
-    h1, h2, h3, h4 { color: #ffffff !important; text-align: center; font-family: 'Courier New'; position: relative; z-index: 10; }
-    .stForm { border: 1px solid #333; border-radius: 15px; background-color: rgba(10, 10, 10, 0.85); position: relative; z-index: 10; }
-    .stButton>button { width: 100%; background-color: #ff4b4b; color: white; font-weight: bold; border-radius: 10px; border: none; }
-    .stProgress > div > div > div > div { background-color: #ff4b4b; }
-    [data-testid="stSidebar"] { background-color: rgba(15, 15, 15, 0.9); border-right: 1px solid #333; }
+    /* 3. LES ÉLÉMENTS DE L'INTERFACE (POUR QU'ILS RESTE LISIBLES) */
+    .stForm { 
+        background-color: rgba(20, 20, 20, 0.8) !important; 
+        border: 1px solid #333 !important;
+        border-radius: 15px;
+    }
+    h1, h2, h3, h4, p, span, label { color: white !important; font-family: 'Courier New'; }
+    [data-testid="stSidebar"] { background-color: rgba(15, 15, 15, 0.95) !important; }
     </style>
-    """, unsafe_allow_html=True)
-
-# --- 4. INJECTION DE LA BRUME (HORS DE TOUTE CONDITION POUR QU'ELLE RESTE) ---
-st.markdown("""
+    
     <div class="fogwrapper">
         <div id="foglayer_01" class="fog"><div class="image01"></div><div class="image02"></div></div>
         <div id="foglayer_02" class="fog"><div class="image01"></div><div class="image02"></div></div>
