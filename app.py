@@ -21,7 +21,7 @@ st.markdown(f"""
             opacity: 0.8;
             font-style: italic;
         ">
-            "Le Gris n'est pas qu'une couleur, c'est une attitude."
+            "En el silencio, mandamos."
         </div>
     </div>
 """, unsafe_allow_html=True)
