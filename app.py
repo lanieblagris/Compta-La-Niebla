@@ -62,6 +62,10 @@ st.markdown(f"""
     [data-testid="stSidebar"] {{
         background-color: rgba(0, 0, 0, 0.9) !important;
     }}
+
+    /* Fix pour la visibilité des metrics */
+    [data-testid="stMetricValue"] {{ color: white !important; }}
+    [data-testid="stMetricLabel"] {{ color: #bbb !important; }}
     </style>
 
     <video autoplay loop muted playsinline id="bgVideo">
@@ -127,9 +131,16 @@ else:
 
         def handle_submit(action, butin=0, drogue="N/A", quantite=0):
             try:
+                # On enregistre le rapport
                 new_row = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Membre": st.session_state['user_pseudo'], "Action": action, "Drogue": drogue, "Quantite": float(quantite), "Butin": float(butin)}])
                 df = conn.read(worksheet="Rapports", ttl=0)
                 conn.update(worksheet="Rapports", data=pd.concat([df, new_row], ignore_index=True))
+                
+                # OPTIONNEL: Si tu veux que les actions alimentent direct la tresorerie en "Sale"
+                df_c = conn.read(worksheet="Tresorerie", ttl=0)
+                new_op = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Recette", "Catégorie": action, "Montant": float(butin), "Note": f"Butin de {st.session_state['user_pseudo']}", "Etat": "Sale"}])
+                conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_op], ignore_index=True))
+
                 st.snow()
                 st.rerun() 
             except: st.error("Erreur GSheets.")
@@ -184,20 +195,21 @@ else:
                     st.table(df_recap)
         except: pass
 
-    # --- PAGE 2 : COMPTABILITÉ GLOBALE (LA FIN RÉAJOUTÉE) ---
+    # --- PAGE 2 : COMPTABILITÉ GLOBALE ---
     elif choice == "Comptabilité Globale":
         st.markdown('<div class="gta-title" style="font-size:50px;">Tresorerie</div>', unsafe_allow_html=True)
         
         with st.form("compta_form"):
             st.write("#### Enregistrer une Opération")
-            c1, c2, c3 = st.columns(3)
+            c1, c2, c3, c4 = st.columns(4)
             t_type = c1.selectbox("Type", ["Recette", "Dépense"])
-            t_cat = c2.text_input("Catégorie (Loyer, Armes, Véhicules...)")
-            t_montant = c3.number_input("Montant ($)", min_value=0)
+            t_etat = c2.selectbox("Argent", ["Sale", "Propre"]) # AJOUT DE L'ONGLET SALE/PROPRE
+            t_cat = c3.text_input("Catégorie (Loyer, Armes, Véhicules...)")
+            t_montant = c4.number_input("Montant ($)", min_value=0)
             t_note = st.text_area("Note / Justification")
             if st.form_submit_button("Enregistrer l'opération"):
                 try:
-                    new_op = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": t_type, "Catégorie": t_cat, "Montant": float(t_montant), "Note": t_note}])
+                    new_op = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": t_type, "Etat": t_etat, "Catégorie": t_cat, "Montant": float(t_montant), "Note": t_note}])
                     df_c = conn.read(worksheet="Tresorerie", ttl=0)
                     conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_op], ignore_index=True))
                     st.success("Opération validée.")
@@ -208,11 +220,17 @@ else:
         try:
             df_all = conn.read(worksheet="Tresorerie", ttl=0)
             if not df_all.empty:
-                rec = df_all[df_all['Type']=="Recette"]['Montant'].sum()
-                dep = df_all[df_all['Type']=="Dépense"]['Montant'].sum()
+                # CALCULS DIFFERENCIES
+                rec_propre = df_all[(df_all['Type']=="Recette") & (df_all['Etat']=="Propre")]['Montant'].sum()
+                dep_propre = df_all[(df_all['Type']=="Dépense") & (df_all['Etat']=="Propre")]['Montant'].sum()
+                
+                rec_sale = df_all[(df_all['Type']=="Recette") & (df_all['Etat']=="Sale")]['Montant'].sum()
+                dep_sale = df_all[(df_all['Type']=="Dépense") & (df_all['Etat']=="Sale")]['Montant'].sum()
+
                 m1, m2, m3 = st.columns(3)
-                m1.metric("RECETTES", f"{rec:,.0f} $")
-                m2.metric("DÉPENSES", f"{dep:,.0f} $")
-                m3.metric("SOLDE COFFRE", f"{rec-dep:,.0f} $", delta=float(rec-dep))
+                m1.metric("SOLDE PROPRE", f"{rec_propre - dep_propre:,.0f} $")
+                m2.metric("SOLDE SALE", f"{rec_sale - dep_sale:,.0f} $")
+                m3.metric("TOTAL GLOBAL", f"{(rec_propre + rec_sale) - (dep_propre + dep_sale):,.0f} $")
+                
                 st.dataframe(df_all.sort_values(by="Date", ascending=False), use_container_width=True)
-        except: st.warning("Veuillez créer un onglet 'Tresorerie' dans votre Google Sheet.")
+        except: st.warning("Veuillez créer un onglet 'Tresorerie' avec une colonne 'Etat' dans votre Google Sheet.")
