@@ -119,43 +119,29 @@ else:
                 b = st.number_input("💵 Vente ($)", min_value=0)
                 if st.form_submit_button("VALIDER DROGUE"): handle_submit("Drogue", butin=b, drogue=d, quantite=q)
 
-        # --- STATISTIQUES TOUJOURS VISIBLES ---
         st.markdown("---")
         st.write("### 📊 STATISTIQUES DE LA SEMAINE")
-        
-        # Initialisation du tableau vide avec tous les membres
         all_members = [u["pseudo"] for u in USERS.values()]
-        stats = pd.DataFrame({
-            'Membre': all_members,
-            'Action': [0]*len(all_members),
-            'Butin_x': [0.0]*len(all_members),
-            'Quantite': [0.0]*len(all_members),
-            'Butin_y': [0.0]*len(all_members)
-        })
-
+        stats = pd.DataFrame({'Membre': all_members, 'Action': [0]*len(all_members), 'Butin_x': [0.0]*len(all_members), 'Quantite': [0.0]*len(all_members), 'Butin_y': [0.0]*len(all_members)})
         try:
             data = conn.read(worksheet="Rapports", ttl=0)
             if data is not None and not data.empty:
                 data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
                 start_week = (datetime.datetime.now() - datetime.timedelta(days=datetime.datetime.now().weekday())).replace(hour=0, minute=0)
                 week_data = data[data['Date'] >= start_week].copy()
-                
                 if not week_data.empty:
                     s_act = week_data[week_data['Action'] != "Drogue"].groupby('Membre').agg({'Action': 'count', 'Butin': 'sum'}).reset_index()
                     s_dro = week_data[week_data['Action'] == "Drogue"].groupby('Membre').agg({'Quantite': 'sum', 'Butin': 'sum'}).reset_index()
                     current_stats = pd.merge(s_act, s_dro, on='Membre', how='outer').fillna(0)
-                    # Fusion avec notre tableau de base pour garder tout le monde
                     stats = pd.merge(stats[['Membre']], current_stats, on='Membre', how='left').fillna(0)
         except: pass
 
-        # Affichage des barres (toujours présentes)
         for _, row in stats.iterrows():
             c1, c2, c3 = st.columns([1, 2, 2])
             c1.write(f"**{row['Membre']}**")
             c2.progress(min(int(row['Action'])/20, 1.0), text=f"Actions: {int(row['Action'])}")
             c3.progress(min(int(row['Quantite'])/300, 1.0), text=f"Drogue: {int(row['Quantite'])}")
         
-        # Affichage du tableau (toujours présent)
         st.write("#### 💸 RÉCAPITULATIF FINANCIER (SEMAINE)")
         df_recap = stats[['Membre', 'Butin_x', 'Butin_y']].copy()
         df_recap.columns = ['Membre', 'Actions ($)', 'Drogue ($)']
@@ -165,28 +151,60 @@ else:
 
     elif choice == "Comptabilité Globale":
         st.markdown('<div class="gta-title" style="font-size:50px;">Tresorerie</div>', unsafe_allow_html=True)
-        with st.form("compta_form"):
-            st.write("#### Enregistrer une Opération")
-            c1, c2, c3, c4 = st.columns(4)
-            t_type = c1.selectbox("Type", ["Recette", "Dépense"])
-            t_etat = c2.selectbox("Argent", ["Sale", "Propre"])
-            t_cat = c3.text_input("Catégorie")
-            t_montant = c4.number_input("Montant ($)", min_value=0)
-            t_note = st.text_area("Note / Justification")
-            if st.form_submit_button("Enregistrer l'opération"):
-                try:
-                    df_c = conn.read(worksheet="Tresorerie", ttl=0)
-                    new_op = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": t_type, "Etat": t_etat, "Catégorie": t_cat, "Montant": float(t_montant), "Note": t_note}])
-                    conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_op], ignore_index=True))
-                    st.success("Opération validée.")
-                    time.sleep(1); st.rerun()
-                except: st.error("Erreur GSheets.")
+        
+        # AJOUT DES ONGLETS DANS LA COMPTABILITÉ
+        sub_tabs = st.tabs(["📊 Vue d'ensemble", "🧼 Blanchiment"])
+
+        with sub_tabs[0]: # VUE D'ENSEMBLE (Formulaire classique)
+            with st.form("compta_form"):
+                st.write("#### Enregistrer une Opération")
+                c1, c2, c3, c4 = st.columns(4)
+                t_type = c1.selectbox("Type", ["Recette", "Dépense"])
+                t_etat = c2.selectbox("Argent", ["Sale", "Propre"])
+                t_cat = c3.text_input("Catégorie")
+                t_montant = c4.number_input("Montant ($)", min_value=0)
+                t_note = st.text_area("Note / Justification")
+                if st.form_submit_button("Enregistrer l'opération"):
+                    try:
+                        df_c = conn.read(worksheet="Tresorerie", ttl=0)
+                        new_op = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": t_type, "Etat": t_etat, "Catégorie": t_cat, "Montant": float(t_montant), "Note": t_note}])
+                        conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_op], ignore_index=True))
+                        st.success("Opération validée."); time.sleep(1); st.rerun()
+                    except: st.error("Erreur GSheets.")
+
+        with sub_tabs[1]: # ONGLET BLANCHIMENT
+            st.write("#### 🧼 Blanchisseur Professionnel")
+            with st.form("blanchiment_form"):
+                col_a, col_b = st.columns(2)
+                montant_sale = col_a.number_input("Montant sale à blanchir ($)", min_value=0)
+                taux = col_b.slider("Taux de commission (%)", 0, 100, 20)
+                
+                propre_final = montant_sale * (1 - taux/100)
+                perte = montant_sale * (taux/100)
+                
+                st.info(f"Résultat estimé : **{propre_final:,.0f} $** seront ajoutés en propre. (Commission : {perte:,.0f} $)")
+                
+                if st.form_submit_button("LANCER LE BLANCHIMENT"):
+                    if montant_sale > 0:
+                        try:
+                            df_t = conn.read(worksheet="Tresorerie", ttl=0)
+                            # 1. On retire l'argent sale
+                            op_sale = {"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Dépense", "Etat": "Sale", "Catégorie": "Blanchiment", "Montant": float(montant_sale), "Note": f"Blanchiment versé (Taux {taux}%)"}
+                            # 2. On ajoute l'argent propre (après taxe)
+                            op_propre = {"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Recette", "Etat": "Propre", "Catégorie": "Blanchiment", "Montant": float(propre_final), "Note": f"Retour blanchiment (Taux {taux}%)"}
+                            
+                            new_data = pd.concat([df_t, pd.DataFrame([op_sale, op_propre])], ignore_index=True)
+                            conn.update(worksheet="Tresorerie", data=new_data)
+                            st.success("L'argent a été blanchi avec succès !")
+                            time.sleep(1.5); st.rerun()
+                        except Exception as e: st.error(f"Erreur : {e}")
+                    else:
+                        st.warning("Indiquez un montant.")
 
         st.markdown("---")
         try:
             df_all = conn.read(worksheet="Tresorerie", ttl=0)
             if not df_all.empty:
-                # Filtrage pour éviter les erreurs de calcul si lignes vides
                 df_calc = df_all.dropna(subset=['Montant', 'Type', 'Etat'])
                 rec_p = df_calc[(df_calc['Type']=="Recette") & (df_calc['Etat']=="Propre")]['Montant'].sum()
                 dep_p = df_calc[(df_calc['Type']=="Dépense") & (df_calc['Etat']=="Propre")]['Montant'].sum()
