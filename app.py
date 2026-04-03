@@ -34,7 +34,7 @@ st.markdown(f"""
     <video autoplay loop muted playsinline id="bgVideo"><source src="{VIDEO_URL}" type="video/mp4"></video>
     """, unsafe_allow_html=True)
 
-# --- 4. BASE DE DONNÉES DES MEMBRES ---
+# --- 4. BASE DE DONNÉES ---
 USERS = {
     "Admin": {"password": "0000", "pseudo": "El Patron"},
     "Alex": {"password": "Alx220717", "pseudo": "Alex Smith"},
@@ -86,17 +86,20 @@ else:
 
         def handle_submit(action, butin=0, drogue="N/A", quantite=0):
             try:
+                # IMPORTANT : On enregistre la quantité telle qu'elle arrive (négative pour les ventes)
                 new_row = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Membre": st.session_state['user_pseudo'], "Action": action, "Drogue": drogue, "Quantite": float(quantite), "Butin": float(butin)}])
                 df = conn.read(worksheet="Rapports", ttl=0)
                 conn.update(worksheet="Rapports", data=pd.concat([df, new_row], ignore_index=True))
+                
                 df_c = conn.read(worksheet="Tresorerie", ttl=0)
                 new_op = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Recette", "Etat": "Sale", "Catégorie": action, "Montant": float(butin), "Note": f"Rapport de {st.session_state['user_pseudo']}"}])
                 conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_op], ignore_index=True))
+                
                 st.success("Transmis avec succès.")
-                time.sleep(1)
-                st.rerun() 
+                time.sleep(1); st.rerun() 
             except Exception as e: st.error(f"Erreur : {e}")
 
+        # Forms...
         with tabs[0]:
             with st.form("atm"):
                 b = st.number_input("💵 Butin ($)", min_value=0, key="b_atm")
@@ -114,11 +117,14 @@ else:
                 if st.form_submit_button("VALIDER CAMBRIOLAGE"): handle_submit("Cambriolage")
         with tabs[4]:
             with st.form("dr"):
-                d = st.text_input("🌿 Produit")
-                q = st.number_input("📦 Quantité", min_value=0)
-                b = st.number_input("💵 Vente ($)", min_value=0)
-                if st.form_submit_button("VALIDER DROGUE"): handle_submit("Drogue", butin=b, drogue=d, quantite=q)
+                d = st.selectbox("🌿 Produit", ["Marijuana", "Cocaine", "Meth", "Heroine", "Autre"])
+                q = st.number_input("📦 Quantité vendue", min_value=0.0)
+                b = st.number_input("💵 Prix de vente ($)", min_value=0)
+                # ICI : On envoie la quantité en NÉGATIF pour la déduire du stock
+                if st.form_submit_button("VALIDER VENTE"): 
+                    handle_submit("Drogue", butin=b, drogue=d, quantite=-abs(q))
 
+        # Stats Hebdo
         st.markdown("---")
         st.write("### 📊 STATISTIQUES DE LA SEMAINE")
         all_members = [u["pseudo"] for u in USERS.values()]
@@ -131,7 +137,8 @@ else:
                 week_data = data[data['Date'] >= start_week].copy()
                 if not week_data.empty:
                     s_act = week_data[week_data['Action'] != "Drogue"].groupby('Membre').agg({'Action': 'count', 'Butin': 'sum'}).reset_index()
-                    s_dro = week_data[week_data['Action'] == "Drogue"].groupby('Membre').agg({'Quantite': 'sum', 'Butin': 'sum'}).reset_index()
+                    # Pour les stats, on affiche la valeur absolue des ventes
+                    s_dro = week_data[week_data['Action'] == "Drogue"].groupby('Membre').agg({'Quantite': lambda x: abs(x).sum(), 'Butin': 'sum'}).reset_index()
                     current_stats = pd.merge(s_act, s_dro, on='Membre', how='outer').fillna(0)
                     stats = pd.merge(stats[['Membre']], current_stats, on='Membre', how='left').fillna(0)
         except: pass
@@ -140,7 +147,7 @@ else:
             c1, c2, c3 = st.columns([1, 2, 2])
             c1.write(f"**{row['Membre']}**")
             c2.progress(min(int(row['Action'])/20, 1.0), text=f"Actions: {int(row['Action'])}")
-            c3.progress(min(int(row['Quantite'])/300, 1.0), text=f"Drogue: {int(row['Quantite'])}")
+            c3.progress(min(int(row['Quantite'])/300, 1.0), text=f"Ventes: {int(row['Quantite'])}")
         
         st.write("#### 💸 RÉCAPITULATIF FINANCIER (SEMAINE)")
         df_recap = stats[['Membre', 'Butin_x', 'Butin_y']].copy()
@@ -151,56 +158,72 @@ else:
 
     elif choice == "Comptabilité Globale":
         st.markdown('<div class="gta-title" style="font-size:50px;">Tresorerie</div>', unsafe_allow_html=True)
-        
-        # AJOUT DES ONGLETS DANS LA COMPTABILITÉ
-        sub_tabs = st.tabs(["📊 Vue d'ensemble", "🧼 Blanchiment"])
+        sub_tabs = st.tabs(["📊 Vue d'ensemble", "🧼 Blanchiment", "📦 Gestion des Stocks"])
 
-        with sub_tabs[0]: # VUE D'ENSEMBLE (Formulaire classique)
+        with sub_tabs[0]:
             with st.form("compta_form"):
-                st.write("#### Enregistrer une Opération")
+                st.write("#### Enregistrer une Opération Manuel")
                 c1, c2, c3, c4 = st.columns(4)
                 t_type = c1.selectbox("Type", ["Recette", "Dépense"])
                 t_etat = c2.selectbox("Argent", ["Sale", "Propre"])
                 t_cat = c3.text_input("Catégorie")
                 t_montant = c4.number_input("Montant ($)", min_value=0)
                 t_note = st.text_area("Note / Justification")
-                if st.form_submit_button("Enregistrer l'opération"):
+                if st.form_submit_button("Valider"):
                     try:
                         df_c = conn.read(worksheet="Tresorerie", ttl=0)
                         new_op = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": t_type, "Etat": t_etat, "Catégorie": t_cat, "Montant": float(t_montant), "Note": t_note}])
                         conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_op], ignore_index=True))
-                        st.success("Opération validée."); time.sleep(1); st.rerun()
-                    except: st.error("Erreur GSheets.")
+                        st.success("Validé."); time.sleep(1); st.rerun()
+                    except: st.error("Erreur.")
 
-        with sub_tabs[1]: # ONGLET BLANCHIMENT
-            st.write("#### 🧼 Blanchisseur Professionnel")
+        with sub_tabs[1]:
+            st.write("#### 🧼 Blanchisseur")
             with st.form("blanchiment_form"):
                 col_a, col_b = st.columns(2)
-                montant_sale = col_a.number_input("Montant sale à blanchir ($)", min_value=0)
-                taux = col_b.slider("Taux de commission (%)", 0, 100, 20)
-                
-                propre_final = montant_sale * (1 - taux/100)
-                perte = montant_sale * (taux/100)
-                
-                st.info(f"Résultat estimé : **{propre_final:,.0f} $** seront ajoutés en propre. (Commission : {perte:,.0f} $)")
-                
-                if st.form_submit_button("LANCER LE BLANCHIMENT"):
-                    if montant_sale > 0:
-                        try:
-                            df_t = conn.read(worksheet="Tresorerie", ttl=0)
-                            # 1. On retire l'argent sale
-                            op_sale = {"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Dépense", "Etat": "Sale", "Catégorie": "Blanchiment", "Montant": float(montant_sale), "Note": f"Blanchiment versé (Taux {taux}%)"}
-                            # 2. On ajoute l'argent propre (après taxe)
-                            op_propre = {"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Recette", "Etat": "Propre", "Catégorie": "Blanchiment", "Montant": float(propre_final), "Note": f"Retour blanchiment (Taux {taux}%)"}
-                            
-                            new_data = pd.concat([df_t, pd.DataFrame([op_sale, op_propre])], ignore_index=True)
-                            conn.update(worksheet="Tresorerie", data=new_data)
-                            st.success("L'argent a été blanchi avec succès !")
-                            time.sleep(1.5); st.rerun()
-                        except Exception as e: st.error(f"Erreur : {e}")
-                    else:
-                        st.warning("Indiquez un montant.")
+                m_sale = col_a.number_input("Montant sale ($)", min_value=0)
+                taux = col_b.slider("Taux (%)", 0, 100, 20)
+                propre = m_sale * (1 - taux/100)
+                if st.form_submit_button("BLANCHIR"):
+                    df_t = conn.read(worksheet="Tresorerie", ttl=0)
+                    op_s = {"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Dépense", "Etat": "Sale", "Catégorie": "Blanchiment", "Montant": float(m_sale), "Note": "Sortie blanchiment"}
+                    op_p = {"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Recette", "Etat": "Propre", "Catégorie": "Blanchiment", "Montant": float(propre), "Note": f"Retour blanchiment (-{taux}%)"}
+                    conn.update(worksheet="Tresorerie", data=pd.concat([df_t, pd.DataFrame([op_s, op_p])], ignore_index=True))
+                    st.success("Blanchi !"); time.sleep(1); st.rerun()
 
+        with sub_tabs[2]:
+            st.write("#### 📦 État des Stocks")
+            # FORMULAIRE POUR AJOUTER DU STOCK (Admin seulement)
+            with st.form("add_stock"):
+                st.write("➕ AJOUTER UN ARRIVAGE (Récolte / Achat)")
+                c1, c2 = st.columns(2)
+                d_name = c1.selectbox("Produit", ["Marijuana", "Cocaine", "Meth", "Heroine", "Autre"])
+                d_qty = c2.number_input("Quantité à ajouter (+)", min_value=0.0)
+                if st.form_submit_button("VALIDER L'ARRIVAGE"):
+                    # ICI : On enregistre en POSITIF pour augmenter le stock
+                    new_s = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Membre": "LA NIEBLA", "Action": "Drogue", "Drogue": d_name, "Quantite": float(d_qty), "Butin": 0}])
+                    df_all_r = conn.read(worksheet="Rapports", ttl=0)
+                    conn.update(worksheet="Rapports", data=pd.concat([df_all_r, new_s], ignore_index=True))
+                    st.success("Stock augmenté !"); time.sleep(1); st.rerun()
+
+            # CALCUL ET AFFICHAGE DU STOCK REEL
+            st.write("---")
+            try:
+                df_rep = conn.read(worksheet="Rapports", ttl=0)
+                if not df_rep.empty:
+                    # Stock = Somme de toutes les quantités (Ventes négatives + Arrivages positifs)
+                    df_drugs = df_rep[df_rep['Action'] == "Drogue"].copy()
+                    stock_final = df_drugs.groupby('Drogue')['Quantite'].sum().reset_index()
+                    
+                    cols = st.columns(len(stock_final) if len(stock_final) > 0 else 1)
+                    if not stock_final.empty:
+                        for i, row in stock_final.iterrows():
+                            cols[i].metric(row['Drogue'], f"{row['Quantite']:.1f} unités")
+                    else:
+                        st.info("Aucun stock en inventaire.")
+            except: pass
+
+        # Footer Trésorerie
         st.markdown("---")
         try:
             df_all = conn.read(worksheet="Tresorerie", ttl=0)
