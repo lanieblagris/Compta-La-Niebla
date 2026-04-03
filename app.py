@@ -8,7 +8,7 @@ st.set_page_config(page_title="La Niebla - Safe House", page_icon="🥷", layout
 
 # --- 2. LIEN DE LA VIDÉO ---
 # Remplace par ton lien GitHub direct (ex: https://raw.githubusercontent.com/.../video.mp4)
-VIDEO_URL = "LIEN_DE_TA_VIDEO_ICI" 
+VIDEO_URL = "https://www.veed.io/view/0fed2d86-9bb1-49d0-b407-a509c8176546?panel=share" 
 
 # --- 3. STYLE CSS & FOND VIDÉO ---
 st.markdown(f"""
@@ -63,7 +63,7 @@ st.markdown(f"""
     </style>
 
     <video autoplay loop muted playsinline id="bgVideo">
-        <source src="{https://www.veed.io/view/0fed2d86-9bb1-49d0-b407-a509c8176546?panel=share}" type="video/mp4">
+        <source src="{VIDEO_URL}" type="video/mp4">
     </video>
     """, unsafe_allow_html=True)
 
