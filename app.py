@@ -31,7 +31,7 @@ st.markdown("""
         z-index: 9999; /* Devant absolument tout */
         overflow: hidden;
         pointer-events: none; /* TRÈS IMPORTANT : permet de cliquer sur les boutons en dessous */
-        opacity: 0.4; /* Transparence globale de la brume */
+        opacity: 0.8; /* Transparence globale de la brume */
     }
     
     .foglayer {
