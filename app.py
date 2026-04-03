@@ -30,9 +30,18 @@ st.markdown("""
         z-index: -10; overflow: hidden; pointer-events: none;
     }
     .foglayer {
-        position: absolute; height: 100%; width: 200%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-        background-size: contain;
+    position: absolute;
+    height: 100%;
+    width: 200%;
+    /* On crée une texture de nuages avec des dégradés radiaux superposés */
+    background-image: 
+        radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15) 0%, transparent 25%),
+        radial-gradient(circle at 70% 80%, rgba(255,255,255,0.1) 0%, transparent 30%),
+        radial-gradient(circle at 40% 20%, rgba(255,255,255,0.12) 0%, transparent 20%),
+        radial-gradient(circle at 80% 40%, rgba(255,255,255,0.08) 0%, transparent 35%);
+    background-size: 50% 100%;
+    filter: blur(40px); /* On floute énormément pour l'effet fumée */
+}
     }
     #layer1 { animation: fogmove 30s linear infinite; opacity: 0.3; }
     #layer2 { animation: fogmove 50s linear infinite; opacity: 0.15; top: 50px; }
