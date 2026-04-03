@@ -16,39 +16,40 @@ USERS = {
 # --- STYLE CSS ULTIME (FORCE LA BRUME PARTOUT) ---
 st.markdown("""
     <style>
-    /* Force la transparence pour voir l'animation derrière */
-    .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], .main {
-        background: transparent !important;
+    /* 1. On prépare le terrain noir */
+    .stApp {
+        background-color: #000000 !important;
     }
 
-    /* Fond noir total en dessous */
-    body { background-color: #000000 !important; }
-
-    /* L'ANIMATION DE LA BRUME */
+    /* 2. LA BRUME PAR-DESSUS TOUT (Z-INDEX MAXIMUM) */
     .fogwrapper {
-        height: 100vh; position: fixed; top: 0; left: 0; width: 100vw;
-        z-index: -10; overflow: hidden; pointer-events: none;
+        height: 100vh;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        z-index: 9999; /* Devant absolument tout */
+        overflow: hidden;
+        pointer-events: none; /* TRÈS IMPORTANT : permet de cliquer sur les boutons en dessous */
+        opacity: 0.4; /* Transparence globale de la brume */
     }
     
     .foglayer {
-        position: absolute; height: 100%; width: 200%;
-        /* Image de brume blanche sur fond transparent */
+        position: absolute;
+        height: 100%;
+        width: 200%;
         background: url("https://www.transparenttextures.com/patterns/fog.png") repeat-x;
         background-size: contain;
     }
 
-    /* Calque 1 : Rapide et plus visible */
     #layer1 { 
-        animation: fogmove 25s linear infinite; 
-        opacity: 0.6; 
-        filter: brightness(150%);
+        animation: fogmove 30s linear infinite; 
     }
 
-    /* Calque 2 : Plus lent et profond */
     #layer2 { 
-        animation: fogmove 45s linear infinite; 
-        opacity: 0.3; 
-        top: 100px;
+        animation: fogmove 55s linear infinite; 
+        top: 20%;
+        opacity: 0.5;
     }
 
     @keyframes fogmove {
@@ -56,9 +57,19 @@ st.markdown("""
         to { transform: translate3d(-50%, 0, 0); }
     }
 
-    /* --- LISIBILITÉ DU CONTENU --- */
-    .stForm { background-color: rgba(10, 10, 10, 0.85) !important; border: 1px solid #444 !important; }
-    h1, h2, h3, h4, p, label { color: white !important; font-family: 'Courier New'; text-shadow: 2px 2px 4px #000; }
+    /* 3. AJUSTEMENT LISIBILITÉ */
+    /* On s'assure que les formulaires sont bien sombres pour que la brume ressorte */
+    .stForm { 
+        background-color: rgb(15, 15, 15) !important; 
+        border: 1px solid #333 !important;
+        position: relative;
+        z-index: 1; /* Sous la brume */
+    }
+    
+    h1, h2, h3, h4, p, label, .stMarkdown { 
+        color: white !important; 
+        font-family: 'Courier New';
+    }
     </style>
 
     <div class="fogwrapper">
@@ -66,6 +77,8 @@ st.markdown("""
         <div id="layer2" class="foglayer"></div>
     </div>
     """, unsafe_allow_html=True)
+
+
 # --- 5. INITIALISATION DE LA SESSION ---
 if 'connected' not in st.session_state:
     st.session_state['connected'] = False
