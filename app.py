@@ -13,54 +13,48 @@ USERS = {
     "Dany": {"password": "081219", "pseudo": "Dany Smith"},
 }
 
-# --- STYLE CSS GLOBAL (FORÇAGE TRANSPARENCE + BRUME) ---
+# --- STYLE CSS ULTIME (FORCE LA BRUME PARTOUT) ---
 st.markdown("""
     <style>
-    /* 1. ON FORCE LA TRANSPARENCE PARTOUT POUR VOIR DERRIÈRE */
-    .stApp, .main, [data-testid="stHeader"], [data-testid="stAppViewContainer"], [data-testid="stCanvas"] {
-        background-color: rgba(0,0,0,0) !important;
+    /* 1. On force la transparence de tous les blocs Streamlit */
+    .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], .main {
+        background: transparent !important;
     }
-    
-    /* Fond de secours noir tout au fond */
-    html { background-color: #000000; }
 
-    /* 2. L'ANIMATION DE LA BRUME */
+    /* Fond noir de base sous l'animation */
+    body { background-color: #000000 !important; }
+
+    /* 2. L'ANIMATION DE LA BRUME (FIXÉE AU FOND) */
     .fogwrapper {
-        height: 100%; position: fixed; top: 0; left: 0; width: 100%;
-        filter: blur(1px); z-index: -1; /* Z-INDEX négatif pour être derrière tout */
-        pointer-events: none;
+        height: 100vh; position: fixed; top: 0; left: 0; width: 100vw;
+        z-index: -10; overflow: hidden; pointer-events: none;
     }
-    #foglayer_01, #foglayer_02, #foglayer_03 { height: 100%; position: absolute; width: 200%; }
-    .image01, .image02 {
-        float: left; height: 100%; width: 50%;
-        background: url("https://raw.githubusercontent.com/Anemolo/Fog-Effect/master/fog1.png") center center / cover no-repeat transparent;
+    .foglayer {
+        position: absolute; height: 100%; width: 200%;
+        background: url("https://raw.githubusercontent.com/Anemolo/Fog-Effect/master/fog1.png") repeat-x;
+        background-size: contain;
     }
-    
-    /* Mouvements */
-    #foglayer_01 { animation: fogmove 20s linear infinite; }
-    #foglayer_02 { animation: fogmove 35s linear infinite; opacity: 0.4; }
-    
+    #layer1 { animation: fogmove 30s linear infinite; opacity: 0.3; }
+    #layer2 { animation: fogmove 50s linear infinite; opacity: 0.15; top: 50px; }
+
     @keyframes fogmove {
-        from { left: 0; }
-        to { left: -100%; }
+        from { transform: translate3d(0, 0, 0); }
+        to { transform: translate3d(-50%, 0, 0); }
     }
 
-    /* 3. LES ÉLÉMENTS DE L'INTERFACE (POUR QU'ILS RESTE LISIBLES) */
-    .stForm { 
-        background-color: rgba(20, 20, 20, 0.8) !important; 
-        border: 1px solid #333 !important;
-        border-radius: 15px;
-    }
-    h1, h2, h3, h4, p, span, label { color: white !important; font-family: 'Courier New'; }
-    [data-testid="stSidebar"] { background-color: rgba(15, 15, 15, 0.95) !important; }
-    </style>
+    /* 3. LISIBILITÉ DU CONTENU */
+    .stForm { background-color: rgba(15, 15, 15, 0.8) !important; border: 1px solid #333 !important; }
+    h1, h2, h3, h4, p, label { color: white !important; font-family: 'Courier New'; text-shadow: 2px 2px 4px #000; }
     
+    /* Sidebar semi-transparente */
+    [data-testid="stSidebar"] { background-color: rgba(10, 10, 10, 0.9) !important; }
+    </style>
+
     <div class="fogwrapper">
-        <div id="foglayer_01" class="fog"><div class="image01"></div><div class="image02"></div></div>
-        <div id="foglayer_02" class="fog"><div class="image01"></div><div class="image02"></div></div>
+        <div id="layer1" class="foglayer"></div>
+        <div id="layer2" class="foglayer"></div>
     </div>
     """, unsafe_allow_html=True)
-
 # --- 5. INITIALISATION DE LA SESSION ---
 if 'connected' not in st.session_state:
     st.session_state['connected'] = False
