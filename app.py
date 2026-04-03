@@ -2,6 +2,7 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import datetime
+import time
 
 # --- 1. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="La Niebla - Safe House", page_icon="🥷", layout="wide")
@@ -63,7 +64,7 @@ st.markdown(f"""
         background-color: rgba(0, 0, 0, 0.9) !important;
     }}
 
-    /* Fix pour la visibilité des metrics */
+    /* Fix visibilité metrics */
     [data-testid="stMetricValue"] {{ color: white !important; }}
     [data-testid="stMetricLabel"] {{ color: #bbb !important; }}
     </style>
@@ -98,7 +99,6 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 # --- 6. LOGIQUE D'AFFICHAGE ---
 if not st.session_state['connected']:
-    # PAGE DE CONNEXION
     st.write("<br><br><br>", unsafe_allow_html=True)
     st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
     _, mid, _ = st.columns([1, 1.2, 1])
@@ -110,7 +110,6 @@ if not st.session_state['connected']:
                 check_login()
                 if st.session_state['connected']: st.rerun()
 else:
-    # INTERFACE ACTIVE
     with st.sidebar:
         st.write(f"### 🥷 {st.session_state['user_pseudo']}")
         menu = ["Tableau de bord"]
@@ -131,19 +130,21 @@ else:
 
         def handle_submit(action, butin=0, drogue="N/A", quantite=0):
             try:
-                # On enregistre le rapport
+                # 1. Mise à jour Rapports
                 new_row = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Membre": st.session_state['user_pseudo'], "Action": action, "Drogue": drogue, "Quantite": float(quantite), "Butin": float(butin)}])
                 df = conn.read(worksheet="Rapports", ttl=0)
                 conn.update(worksheet="Rapports", data=pd.concat([df, new_row], ignore_index=True))
                 
-                # OPTIONNEL: Si tu veux que les actions alimentent direct la tresorerie en "Sale"
+                # 2. Mise à jour Trésorerie (Automatiquement en Sale)
                 df_c = conn.read(worksheet="Tresorerie", ttl=0)
-                new_op = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Recette", "Catégorie": action, "Montant": float(butin), "Note": f"Butin de {st.session_state['user_pseudo']}", "Etat": "Sale"}])
+                new_op = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Recette", "Etat": "Sale", "Catégorie": action, "Montant": float(butin), "Note": f"Rapport de {st.session_state['user_pseudo']}"}])
                 conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_op], ignore_index=True))
-
-                st.snow()
+                
+                st.success("Transmis avec succès.")
+                time.sleep(1) # Pause pour stabiliser GSheets
                 st.rerun() 
-            except: st.error("Erreur GSheets.")
+            except Exception as e: 
+                st.error(f"Erreur de connexion : {e}")
 
         with tabs[0]:
             with st.form("atm"):
@@ -203,7 +204,7 @@ else:
             st.write("#### Enregistrer une Opération")
             c1, c2, c3, c4 = st.columns(4)
             t_type = c1.selectbox("Type", ["Recette", "Dépense"])
-            t_etat = c2.selectbox("Argent", ["Sale", "Propre"]) # AJOUT DE L'ONGLET SALE/PROPRE
+            t_etat = c2.selectbox("Argent", ["Sale", "Propre"])
             t_cat = c3.text_input("Catégorie (Loyer, Armes, Véhicules...)")
             t_montant = c4.number_input("Montant ($)", min_value=0)
             t_note = st.text_area("Note / Justification")
@@ -213,6 +214,7 @@ else:
                     df_c = conn.read(worksheet="Tresorerie", ttl=0)
                     conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_op], ignore_index=True))
                     st.success("Opération validée.")
+                    time.sleep(1)
                     st.rerun()
                 except: st.error("Erreur d'accès à l'onglet 'Tresorerie'.")
 
@@ -220,17 +222,17 @@ else:
         try:
             df_all = conn.read(worksheet="Tresorerie", ttl=0)
             if not df_all.empty:
-                # CALCULS DIFFERENCIES
-                rec_propre = df_all[(df_all['Type']=="Recette") & (df_all['Etat']=="Propre")]['Montant'].sum()
-                dep_propre = df_all[(df_all['Type']=="Dépense") & (df_all['Etat']=="Propre")]['Montant'].sum()
-                
-                rec_sale = df_all[(df_all['Type']=="Recette") & (df_all['Etat']=="Sale")]['Montant'].sum()
-                dep_sale = df_all[(df_all['Type']=="Dépense") & (df_all['Etat']=="Sale")]['Montant'].sum()
+                # Calculs Propre
+                rec_p = df_all[(df_all['Type']=="Recette") & (df_all['Etat']=="Propre")]['Montant'].sum()
+                dep_p = df_all[(df_all['Type']=="Dépense") & (df_all['Etat']=="Propre")]['Montant'].sum()
+                # Calculs Sale
+                rec_s = df_all[(df_all['Type']=="Recette") & (df_all['Etat']=="Sale")]['Montant'].sum()
+                dep_s = df_all[(df_all['Type']=="Dépense") & (df_all['Etat']=="Sale")]['Montant'].sum()
 
                 m1, m2, m3 = st.columns(3)
-                m1.metric("SOLDE PROPRE", f"{rec_propre - dep_propre:,.0f} $")
-                m2.metric("SOLDE SALE", f"{rec_sale - dep_sale:,.0f} $")
-                m3.metric("TOTAL GLOBAL", f"{(rec_propre + rec_sale) - (dep_propre + dep_sale):,.0f} $")
+                m1.metric("SOLDE PROPRE", f"{rec_p - dep_p:,.0f} $")
+                m2.metric("SOLDE SALE", f"{rec_s - dep_s:,.0f} $")
+                m3.metric("TOTAL GLOBAL", f"{(rec_p + rec_s) - (dep_p + dep_s):,.0f} $")
                 
                 st.dataframe(df_all.sort_values(by="Date", ascending=False), use_container_width=True)
-        except: st.warning("Veuillez créer un onglet 'Tresorerie' avec une colonne 'Etat' dans votre Google Sheet.")
+        except: st.warning("Vérifiez l'onglet 'Tresorerie' (Colonnes: Date, Type, Etat, Catégorie, Montant, Note).")
