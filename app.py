@@ -94,7 +94,7 @@ footer {visibility: hidden;}
 
 """, unsafe_allow_html=True)
 
-CONTENU RP
+# --- 0. COTENU RP ---
 st.markdown("<h1>La Niebla</h1>", unsafe_allow_html=True)
 st.markdown('<div class="subtitle">EN EL SILENCIO, MANDAMOS</div>', unsafe_allow_html=True)
 
