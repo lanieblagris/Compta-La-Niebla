@@ -7,6 +7,23 @@ import time
 # --- 1. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="La Niebla - FlashBack FA", page_icon="🥷", layout="wide")
 
+# Liste de citations cohérentes avec le Lore
+citations = [
+    "« Le monde ne voit que la fumée, mais c’est dans la brume que nous forgeons notre empire. »",
+    "« Pas de cadavres inutile, juste le contrôle total. »",
+    "« Le Gris n'est pas qu'une couleur, c'est une attitude. »",
+    "« Celui qui parle n'existe plus. »",
+    "« Soyez le courant d'air froid avant que la porte ne se referme. »"
+]
+
+import random
+# Affichage en haut du dashboard
+st.markdown(f"""
+    <div style="text-align: center; font-style: italic; color: #888; padding: 10px; border-top: 1px solid #333; border-bottom: 1px solid #333; margin-bottom: 20px;">
+        {random.choice(citations)}
+    </div>
+""", unsafe_allow_html=True)
+
 # --- 2. LIEN DE LA VIDÉO ---
 VIDEO_URL = "https://assets.mixkit.co/videos/preview/mixkit-mysterious-pale-fog-moving-slowly-over-the-ground-44130-large.mp4"
 
