@@ -7,20 +7,22 @@ import time
 # --- 1. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="La Niebla - FlashBack FA", page_icon="🥷", layout="wide")
 
-# Liste de citations cohérentes avec le Lore
-citations = [
-    "« Le monde ne voit que la fumée, mais c’est dans la brume que nous forgeons notre empire. »",
-    "« Pas de cadavres inutile, juste le contrôle total. »",
-    "« Le Gris n'est pas qu'une couleur, c'est une attitude. »",
-    "« Celui qui parle n'existe plus. »",
-    "« Soyez le courant d'air froid avant que la porte ne se referme. »"
-]
-
-import random
-# Affichage en haut du dashboard
+# --- HAUT DE PAGE STYLISÉ ---
 st.markdown(f"""
-    <div style="text-align: center; font-style: italic; color: #888; padding: 10px; border-top: 1px solid #333; border-bottom: 1px solid #333; margin-bottom: 20px;">
-        {random.choice(citations)}
+    <div style="text-align: center; margin-top: -50px;">
+        <div class="gta-title" style="margin-bottom: 0px;">La Niebla</div>
+        <div style="
+            font-family: 'Courier New', monospace;
+            color: #888;
+            font-size: 18px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            opacity: 0.8;
+            font-style: italic;
+        ">
+            "Le Gris n'est pas qu'une couleur, c'est une attitude."
+        </div>
     </div>
 """, unsafe_allow_html=True)
 
