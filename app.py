@@ -6,43 +6,79 @@ import datetime
 # --- 1. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="La Niebla - Safe House", page_icon="🥷", layout="wide")
 
-# --- 2. LIEN DE LA VIDÉO ---
+# --- 2. LIEN DE LA VIDÉO (FONCTIONNEL) ---
 VIDEO_URL = "https://assets.mixkit.co/videos/preview/mixkit-mysterious-pale-fog-moving-slowly-over-the-ground-44130-large.mp4"
 
-# --- 3. STYLE CSS "LOS SANTOS" ---
+# --- 3. STYLE CSS "LOS SANTOS" & TITRE ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap');
-    .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], .main {{ background: transparent !important; }}
-    body {{ background-color: #000000; }}
+
+    /* Transparence des éléments Streamlit */
+    .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], .main {{
+        background: transparent !important;
+    }}
+
+    body {{
+        background-color: #000000;
+    }}
+
+    /* TITRE STYLE GTA LOS SANTOS */
     .gta-title {{
-        font-family: 'UnifrakturMaguntia', cursive; font-size: 85px; color: white;
-        text-align: center; text-shadow: 5px 5px 15px #000, 0 0 25px #555;
-        margin-top: -60px; margin-bottom: 10px; letter-spacing: 3px;
+        font-family: 'UnifrakturMaguntia', cursive;
+        font-size: 85px;
+        color: white;
+        text-align: center;
+        text-shadow: 5px 5px 15px #000, 0 0 25px #555;
+        margin-top: -60px;
+        margin-bottom: 10px;
+        letter-spacing: 3px;
     }}
+
+    /* CONFIGURATION VIDÉO FOND */
     #bgVideo {{
-        position: fixed; right: 0; bottom: 0; min-width: 100%; min-height: 100%;
-        z-index: -1000; filter: brightness(0.3); object-fit: cover;
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        min-width: 100%;
+        min-height: 100%;
+        z-index: -1000;
+        filter: brightness(0.3);
+        object-fit: cover;
     }}
-    .stForm {{ background-color: rgba(10, 10, 10, 0.85) !important; border: 1px solid #444 !important; border-radius: 10px; }}
-    h1, h2, h3, h4, p, label, .stMarkdown, [data-testid="stWidgetLabel"] {{ color: white !important; font-family: 'Courier New', monospace; }}
-    [data-testid="stSidebar"] {{ background-color: rgba(0, 0, 0, 0.9) !important; }}
+
+    /* STYLE DES ÉLÉMENTS UI */
+    .stForm {{ 
+        background-color: rgba(10, 10, 10, 0.85) !important; 
+        border: 1px solid #444 !important;
+        border-radius: 10px;
+    }}
     
-    /* Style pour les metrics pour qu'ils soient bien visibles sur le fond sombre */
-    [data-testid="stMetricValue"] {{ color: white !important; font-family: 'Courier New', monospace !important; }}
-    [data-testid="stMetricLabel"] {{ color: #ccc !important; }}
+    h1, h2, h3, h4, p, label, .stMarkdown, [data-testid="stWidgetLabel"] {{ 
+        color: white !important; 
+        font-family: 'Courier New', monospace;
+    }}
+
+    [data-testid="stSidebar"] {{
+        background-color: rgba(0, 0, 0, 0.9) !important;
+    }}
     </style>
-    <video autoplay loop muted playsinline id="bgVideo"><source src="{VIDEO_URL}" type="video/mp4"></video>
+
+    <video autoplay loop muted playsinline id="bgVideo">
+        <source src="{VIDEO_URL}" type="video/mp4">
+    </video>
     """, unsafe_allow_html=True)
 
-# --- 4. BASE DE DONNÉES ---
+# --- 4. BASE DE DONNÉES DES MEMBRES ---
 USERS = {
     "Admin": {"password": "0000", "pseudo": "Le Patron"},
     "Alex": {"password": "1234", "pseudo": "Alex Smith"},
     "Dany": {"password": "081219", "pseudo": "Dany Smith"},
 }
 
-if 'connected' not in st.session_state: st.session_state['connected'] = False
+# --- 5. INITIALISATION DE LA SESSION ---
+if 'connected' not in st.session_state:
+    st.session_state['connected'] = False
 
 def check_login():
     u = st.session_state.get("user_login")
@@ -51,11 +87,14 @@ def check_login():
         st.session_state['connected'] = True
         st.session_state['user_role'] = u
         st.session_state['user_pseudo'] = USERS[u]["pseudo"]
+    else:
+        st.error("Accès refusé.")
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- 5. LOGIQUE D'AFFICHAGE ---
+# --- 6. LOGIQUE D'AFFICHAGE ---
 if not st.session_state['connected']:
+    # PAGE DE CONNEXION
     st.write("<br><br><br>", unsafe_allow_html=True)
     st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
     _, mid, _ = st.columns([1, 1.2, 1])
@@ -67,15 +106,18 @@ if not st.session_state['connected']:
                 check_login()
                 if st.session_state['connected']: st.rerun()
 else:
+    # INTERFACE ACTIVE
     with st.sidebar:
         st.write(f"### 🥷 {st.session_state['user_pseudo']}")
         menu = ["Tableau de bord"]
-        if st.session_state['user_role'] == "Admin": menu.append("Comptabilité Globale")
+        if st.session_state['user_role'] == "Admin":
+            menu.append("Comptabilité Globale")
         choice = st.radio("Navigation", menu)
         if st.button("Déconnexion"):
             st.session_state['connected'] = False
             st.rerun()
 
+    # --- PAGE 1 : TABLEAU DE BORD ---
     if choice == "Tableau de bord":
         st.markdown('<div class="gta-title" style="font-size:60px;">La Niebla</div>', unsafe_allow_html=True)
         LOGO_URL = "https://raw.githubusercontent.com/lanieblagris/Compta-La-Niebla/main/logo.png?v=4"
@@ -85,17 +127,12 @@ else:
 
         def handle_submit(action, butin=0, drogue="N/A", quantite=0):
             try:
-                new_row = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Membre": st.session_state['user_pseudo'], "Action": action, "Drogue": drogue, "Quantite": float(quantite), "Butin": float(butin), "Type_Argent": "Sale"}])
+                new_row = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Membre": st.session_state['user_pseudo'], "Action": action, "Drogue": drogue, "Quantite": float(quantite), "Butin": float(butin)}])
                 df = conn.read(worksheet="Rapports", ttl=0)
                 conn.update(worksheet="Rapports", data=pd.concat([df, new_row], ignore_index=True))
-                
-                df_c = conn.read(worksheet="Tresorerie", ttl=0)
-                new_op = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Recette", "Catégorie": f"Action: {action}", "Montant": float(butin), "Note": f"Rapport de {st.session_state['user_pseudo']}", "Etat": "Sale"}])
-                conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_op], ignore_index=True))
-                
                 st.snow()
                 st.rerun() 
-            except: st.error("Erreur réseau.")
+            except: st.error("Erreur GSheets.")
 
         with tabs[0]:
             with st.form("atm"):
@@ -111,64 +148,71 @@ else:
                 if st.form_submit_button("VALIDER GO FAST"): handle_submit("Go Fast", butin=b)
         with tabs[3]:
             with st.form("cam"):
-                if st.form_submit_button("CONFIRMER CAMBRIOLAGE"): handle_submit("Cambriolage")
+                if st.form_submit_button("VALIDER CAMBRIOLAGE"): handle_submit("Cambriolage")
         with tabs[4]:
             with st.form("dr"):
                 d = st.text_input("🌿 Produit")
                 q = st.number_input("📦 Quantité", min_value=0)
-                b = st.number_input("💵 Vente totale ($)", min_value=0)
-                if st.form_submit_button("VALIDER VENTE"): handle_submit("Drogue", butin=b, drogue=d, quantite=q)
+                b = st.number_input("💵 Vente ($)", min_value=0)
+                if st.form_submit_button("VALIDER DROGUE"): handle_submit("Drogue", butin=b, drogue=d, quantite=q)
 
+        # STATS HEBDO
+        st.markdown("---")
+        st.write("### 📊 STATISTIQUES HEBDOMADAIRES")
+        try:
+            data = conn.read(worksheet="Rapports", ttl=0)
+            if data is not None and not data.empty:
+                data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
+                start_week = (datetime.datetime.now() - datetime.timedelta(days=datetime.datetime.now().weekday())).replace(hour=0, minute=0)
+                week_data = data[data['Date'] >= start_week].copy()
+                if not week_data.empty:
+                    s_act = week_data[week_data['Action'] != "Drogue"].groupby('Membre').agg({'Action': 'count', 'Butin': 'sum'}).reset_index()
+                    s_dro = week_data[week_data['Action'] == "Drogue"].groupby('Membre').agg({'Quantite': 'sum', 'Butin': 'sum'}).reset_index()
+                    stats = pd.merge(s_act, s_dro, on='Membre', how='outer').fillna(0)
+                    
+                    for _, row in stats.iterrows():
+                        c1, c2, c3 = st.columns([1, 2, 2])
+                        c1.write(f"**{row['Membre']}**")
+                        c2.progress(min(int(row['Action'])/20, 1.0), text=f"Actions: {int(row['Action'])}")
+                        c3.progress(min(int(row['Quantite'])/300, 1.0), text=f"Drogue: {int(row['Quantite'])}")
+                    
+                    st.write("#### 💸 RÉCAPITULATIF FINANCIER")
+                    df_recap = stats[['Membre', 'Butin_x', 'Butin_y']].copy()
+                    df_recap.columns = ['Membre', 'Actions ($)', 'Drogue ($)']
+                    df_recap['Actions ($)'] = df_recap['Actions ($)'].apply(lambda x: f"{int(x):,.0f} $".replace(',', ' '))
+                    df_recap['Drogue ($)'] = df_recap['Drogue ($)'].apply(lambda x: f"{int(x):,.0f} $".replace(',', ' '))
+                    st.table(df_recap)
+        except: pass
+
+    # --- PAGE 2 : COMPTABILITÉ GLOBALE (LA FIN RÉAJOUTÉE) ---
     elif choice == "Comptabilité Globale":
         st.markdown('<div class="gta-title" style="font-size:50px;">Tresorerie</div>', unsafe_allow_html=True)
         
-        # --- RÉCUPÉRATION DES DONNÉES ET CALCULS DES SOLDES ---
+        with st.form("compta_form"):
+            st.write("#### Enregistrer une Opération")
+            c1, c2, c3 = st.columns(3)
+            t_type = c1.selectbox("Type", ["Recette", "Dépense"])
+            t_cat = c2.text_input("Catégorie (Loyer, Armes, Véhicules...)")
+            t_montant = c3.number_input("Montant ($)", min_value=0)
+            t_note = st.text_area("Note / Justification")
+            if st.form_submit_button("Enregistrer l'opération"):
+                try:
+                    new_op = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": t_type, "Catégorie": t_cat, "Montant": float(t_montant), "Note": t_note}])
+                    df_c = conn.read(worksheet="Tresorerie", ttl=0)
+                    conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_op], ignore_index=True))
+                    st.success("Opération validée.")
+                    st.rerun()
+                except: st.error("Erreur d'accès à l'onglet 'Tresorerie'.")
+
+        st.markdown("---")
         try:
             df_all = conn.read(worksheet="Tresorerie", ttl=0)
             if not df_all.empty:
-                # Coffre Sale
-                sale_rec = df_all[(df_all['Type']=="Recette") & (df_all['Etat']=="Sale")]['Montant'].sum()
-                sale_dep = df_all[(df_all['Type']=="Dépense") & (df_all['Etat']=="Sale")]['Montant'].sum()
-                solde_sale = sale_rec - sale_dep
-
-                # Coffre Propre
-                propre_rec = df_all[(df_all['Type']=="Recette") & (df_all['Etat']=="Propre")]['Montant'].sum()
-                propre_dep = df_all[(df_all['Type']=="Dépense") & (df_all['Etat']=="Propre")]['Montant'].sum()
-                solde_propre = propre_rec - propre_dep
-
-                # AFFICHAGE DES MÉTRIQUES (LES CHIFFRES EN HAUT)
-                col1, col2, col3 = st.columns(3)
-                col1.metric("🔴 COFFRE SALE", f"{solde_sale:,.0f} $".replace(',', ' '))
-                col2.metric("🟢 COFFRE PROPRE", f"{solde_propre:,.0f} $".replace(',', ' '))
-                col3.metric("💰 TOTAL GLOBAL", f"{solde_sale + solde_propre:,.0f} $".replace(',', ' '))
-                
-                st.markdown("---")
-        except:
-            st.warning("Erreur lors du calcul des soldes.")
-
-        # FORMULAIRE D'OPÉRATION
-        with st.form("compta_form"):
-            st.write("#### Nouvelle Opération")
-            c1, c2, c3, c4 = st.columns(4)
-            t_type = c1.selectbox("Type", ["Recette", "Dépense", "Blanchiment"])
-            t_etat = c2.selectbox("Coffre", ["Sale", "Propre"])
-            t_montant = c3.number_input("Montant ($)", min_value=0)
-            t_cat = c4.text_input("Catégorie")
-            t_note = st.text_area("Notes")
-            
-            if st.form_submit_button("ENREGISTRER"):
-                try:
-                    df_c = conn.read(worksheet="Tresorerie", ttl=0)
-                    new_op = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": t_type, "Catégorie": t_cat, "Montant": float(t_montant), "Note": t_note, "Etat": t_etat}])
-                    conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_op], ignore_index=True))
-                    st.success("Opération enregistrée.")
-                    st.rerun()
-                except: st.error("Erreur GSheets.")
-
-        st.markdown("---")
-        # AFFICHAGE DU TABLEAU
-        try:
-            if not df_all.empty:
-                st.write("#### Historique complet")
+                rec = df_all[df_all['Type']=="Recette"]['Montant'].sum()
+                dep = df_all[df_all['Type']=="Dépense"]['Montant'].sum()
+                m1, m2, m3 = st.columns(3)
+                m1.metric("RECETTES", f"{rec:,.0f} $")
+                m2.metric("DÉPENSES", f"{dep:,.0f} $")
+                m3.metric("SOLDE COFFRE", f"{rec-dep:,.0f} $", delta=float(rec-dep))
                 st.dataframe(df_all.sort_values(by="Date", ascending=False), use_container_width=True)
-        except: pass
+        except: st.warning("Veuillez créer un onglet 'Tresorerie' dans votre Google Sheet.")
