@@ -11,6 +11,40 @@ st.set_page_config(page_title="La Niebla - FlashBack FA", page_icon="🥷", layo
 VIDEO_URL = "https://assets.mixkit.co/videos/preview/mixkit-mysterious-pale-fog-moving-slowly-over-the-ground-44130-large.mp4"
 
 # --- 3. STYLE CSS "LOS SANTOS" & TITRE ---
+st.markdown("""
+<style>
+
+/* Fond principal /
+.stApp {
+    background: linear-gradient(180deg, #0a0a0a 0%, #111 100%);
+    overflow: hidden;
+}
+
+/ Brume animée /
+.stApp::before {
+    content: "";
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: url("https://i.imgur.com/8IhQKpR.png"); / texture de fumée /
+    background-size: cover;
+    opacity: 0.15;
+    animation: fogMove 60s linear infinite;
+    z-index: 0;
+}
+
+/ Animation */
+@keyframes fogMove {
+    0% { transform: translate(0, 0); }
+    50% { transform: translate(10%, 5%); }
+    100% { transform: translate(0, 0); }
+}
+
+</style>
+""", unsafe_allow_html=True)
+
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap');
