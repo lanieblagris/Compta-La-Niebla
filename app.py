@@ -27,6 +27,8 @@ st.markdown("""
     [data-testid="stSidebar"] { background-color: #111; border-right: 1px solid #333; }
     .stTabs [data-baseweb="tab-list"] { background-color: #111; border-radius: 10px; }
     .stTabs [data-baseweb="tab"] { color: #ffffff; }
+    /* Style des metrics */
+    [data-testid="stMetricValue"] { color: #ff4b4b !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -49,17 +51,14 @@ def check_login():
 # --- CONNEXION GOOGLE SHEETS ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- LOGIQUE D'AFFICHAGE ---
 if not st.session_state['connected']:
-    # PAGE DE CONNEXION
     st.write("<h1>☁️ S A F E &nbsp; H O U S E</h1>", unsafe_allow_html=True)
     with st.form("login_form"):
-        st.write("<p style='text-align: center; color: #888;'>Identifiez-vous pour entrer</p>", unsafe_allow_html=True)
         st.text_input("Nom de code", key="user_login")
         st.text_input("Mot de passe", type="password", key="password_login")
         st.form_submit_button("ENTRER", on_click=check_login)
 else:
-    # --- BARRE LATÉRALE (NAVIGATION) ---
+    # --- NAVIGATION SIDEBAR ---
     with st.sidebar:
         st.write(f"### 🥷 {st.session_state['user_pseudo']}")
         menu = ["Tableau de bord"]
@@ -68,43 +67,30 @@ else:
             st.write("🔑 **DIRECTION**")
             menu.append("Comptabilité Globale")
         
-        choice = st.sidebar.radio("Navigation", menu)
-        
+        choice = st.radio("Navigation", menu)
         st.write("---")
-        if st.sidebar.button("Déconnexion"):
+        if st.button("Déconnexion"):
             st.session_state['connected'] = False
             st.rerun()
 
-    # --- PAGE 1 : TABLEAU DE BORD (Membres & Stats) ---
+    # --- PAGE 1 : TABLEAU DE BORD ---
     if choice == "Tableau de bord":
         LOGO_URL = "https://raw.githubusercontent.com/lanieblagris/Compta-La-Niebla/main/logo.png?v=4"
-        st.markdown(f"""
-            <div style="width: 100%; overflow: hidden; margin-bottom: 10px;">
-                <img src="{LOGO_URL}" style="width: 100%; height: 250px; object-fit: cover; border-radius: 10px; border: 2px solid #333;">
-            </div>
-            """, unsafe_allow_html=True)
-
+        st.markdown(f'<div style="width:100%;"><img src="{LOGO_URL}" style="width:100%; height:250px; object-fit:cover; border-radius:10px; border:2px solid #333;"></div>', unsafe_allow_html=True)
         st.markdown(f'<marquee class="brouillard-text" scrollamount="5">⚠️ TRANSMISSION SÉCURISÉE ... BIENVENUE {st.session_state["user_pseudo"].upper()} ... ⚠️</marquee>', unsafe_allow_html=True)
-        st.write(f"<p style='text-align: center; color: #ff4b4b; margin-top:-10px; font-weight: bold;'>Session active : {st.session_state['user_pseudo']}</p>", unsafe_allow_html=True)
 
         tabs = st.tabs(["💰 ATM", "🛒 Supérette", "🏎️ Go Fast", "🏠 Cambriolage", "🌿 Drogue"])
 
         def handle_submit(action, butin=0, drogue="N/A", quantite=0):
             try:
-                new_row = pd.DataFrame([{
-                    "Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-                    "Membre": st.session_state['user_pseudo'],
-                    "Action": action, 
-                    "Drogue": drogue, 
-                    "Quantite": float(quantite), 
-                    "Butin": float(butin)
-                }])
+                new_row = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Membre": st.session_state['user_pseudo'], "Action": action, "Drogue": drogue, "Quantite": float(quantite), "Butin": float(butin)}])
                 df = conn.read(worksheet="Rapports", ttl=0)
                 conn.update(worksheet="Rapports", data=pd.concat([df, new_row], ignore_index=True))
                 st.snow()
                 st.rerun() 
             except Exception as e: st.error(f"Erreur : {e}")
 
+        # Formulaires simples
         with tabs[0]:
             with st.form("atm"):
                 b = st.number_input("💵 Butin ($)", min_value=0, key="atmb")
@@ -122,12 +108,11 @@ else:
                 if st.form_submit_button("TRANSMETTRE CAMBRIOLAGE"): handle_submit("Cambriolage")
         with tabs[4]:
             with st.form("dr"):
-                d = st.text_input("🌿 Produit", placeholder="Ex: Weed...", key="drn")
+                d = st.text_input("🌿 Produit", placeholder="Weed...", key="drn")
                 q = st.number_input("📦 Quantité", min_value=0, key="drq")
                 b = st.number_input("💵 Total vente ($)", min_value=0, key="drb")
                 if st.form_submit_button("TRANSMETTRE DROGUE"): handle_submit("Drogue", butin=b, drogue=d, quantite=q)
 
-        # --- STATS HEBDOMADAIRES ---
         st.markdown("---")
         st.write("### 📊 STATISTIQUES DE LA SEMAINE")
         try:
@@ -136,80 +121,73 @@ else:
                 data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
                 data['Quantite'] = pd.to_numeric(data['Quantite'], errors='coerce').fillna(0)
                 data['Butin'] = pd.to_numeric(data['Butin'], errors='coerce').fillna(0)
-                
                 today = datetime.datetime.now()
                 start_week = (today - datetime.timedelta(days=today.weekday())).replace(hour=0, minute=0, second=0)
                 week_data = data[data['Date'] >= start_week].copy()
 
                 if not week_data.empty:
-                    # Séparation Actions vs Drogue
-                    actions_df = week_data[week_data['Action'] != "Drogue"]
-                    stats_actions = actions_df.groupby('Membre').agg({'Action': 'count', 'Butin': 'sum'}).reset_index()
-                    stats_actions.rename(columns={'Butin': 'Argent_Actions'}, inplace=True)
-                    
-                    drogue_df = week_data[week_data['Action'] == "Drogue"]
-                    stats_drogue = drogue_df.groupby('Membre').agg({'Quantite': 'sum', 'Butin': 'sum'}).reset_index()
-                    stats_drogue.rename(columns={'Butin': 'Argent_Drogue'}, inplace=True)
-
+                    stats_actions = week_data[week_data['Action'] != "Drogue"].groupby('Membre').agg({'Action': 'count', 'Butin': 'sum'}).reset_index().rename(columns={'Butin': 'Argent_Actions'})
+                    stats_drogue = week_data[week_data['Action'] == "Drogue"].groupby('Membre').agg({'Quantite': 'sum', 'Butin': 'sum'}).reset_index().rename(columns={'Butin': 'Argent_Drogue'})
                     stats = pd.merge(stats_actions, stats_drogue, on='Membre', how='outer').fillna(0)
 
                     for _, row in stats.iterrows():
                         c1, c2, c3 = st.columns([1, 2, 2])
                         c1.write(f"**{row['Membre']}**")
-                        val_act = int(row['Action'])
-                        txt_act = f"Actions: {val_act}/20"
-                        if val_act > 20: txt_act += f" 🔥 (+{val_act-20})"
-                        c2.progress(min(val_act/20, 1.0), text=txt_act)
-                        val_dro = int(row['Quantite'])
-                        txt_dro = f"Drogue: {val_dro}/300"
-                        if val_dro > 300: txt_dro += f" 💰 (+{val_dro-300})"
-                        c3.progress(min(val_dro/300, 1.0), text=txt_dro)
+                        v_act = int(row['Action'])
+                        c2.progress(min(v_act/20, 1.0), text=f"Actions: {v_act}/20" + (f" 🔥 (+{v_act-20})" if v_act > 20 else ""))
+                        v_dro = int(row['Quantite'])
+                        c3.progress(min(v_dro/300, 1.0), text=f"Drogue: {v_dro}/300" + (f" 💰 (+{v_dro-300})" if v_dro > 300 else ""))
 
                     st.write("#### 💸 Récapitulatif des Gains")
-                    df_finance = stats[['Membre', 'Argent_Actions', 'Argent_Drogue']].copy()
-                    df_finance.columns = ['Membre', 'Butin Actions ($)', 'Ventes Drogue ($)']
-                    df_finance['Butin Actions ($)'] = df_finance['Butin Actions ($)'].apply(lambda x: f"{x:,.0f} $".replace(',', ' '))
-                    df_finance['Ventes Drogue ($)'] = df_finance['Ventes Drogue ($)'].apply(lambda x: f"{x:,.0f} $".replace(',', ' '))
-                    st.table(df_finance)
-                else: st.info("Aucune activité cette semaine.")
-            else: st.info("Au boulot feneant !")
-        except Exception as e: st.info("Données en cours de synchronisation...")
+                    df_f = stats[['Membre', 'Argent_Actions', 'Argent_Drogue']].copy()
+                    df_f.columns = ['Membre', 'Butin Actions ($)', 'Ventes Drogue ($)']
+                    df_f['Butin Actions ($)'] = df_f['Butin Actions ($)'].apply(lambda x: f"{x:,.0f} $")
+                    df_f['Ventes Drogue ($)'] = df_f['Ventes Drogue ($)'].apply(lambda x: f"{x:,.0f} $")
+                    st.table(df_f)
+                else: st.info("Au boulot feneant !")
+        except Exception as e: st.info("En attente de données...")
 
-    # --- PAGE 2 : COMPTABILITÉ GLOBALE (RESERVÉ ADMIN) ---
+    # --- PAGE 2 : COMPTABILITÉ GLOBALE (ADMIN) ---
     elif choice == "Comptabilité Globale":
-        st.write("## 🏛️ COMPTABILITÉ DE LA NIEBLA")
+        st.write("## 🏛️ DIRECTION - GESTION DU COFFRE")
         
-        with st.form("compta_form"):
-            st.write("#### Enregistrer une Opération")
-            c1, c2, c3 = st.columns(3)
-            t_type = c1.selectbox("Type", ["Recette", "Dépense"])
-            t_cat = c2.text_input("Catégorie (Loyer, Armes, Véhicules...)")
-            t_montant = c3.number_input("Montant ($)", min_value=0)
-            t_note = st.text_area("Note / Justification")
-            
-            if st.form_submit_button("Enregistrer l'opération"):
-                try:
-                    new_op = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": t_type, "Catégorie": t_cat, "Montant": float(t_montant), "Note": t_note}])
-                    df_compta = conn.read(worksheet="Tresorerie", ttl=0)
-                    conn.update(worksheet="Tresorerie", data=pd.concat([df_compta, new_op], ignore_index=True))
-                    st.success("Opération enregistrée.")
-                    st.rerun()
-                except Exception as e: st.error(f"Erreur : {e}")
-
-        st.markdown("---")
+        # Section 1 : Metrics
         try:
             df_all = conn.read(worksheet="Tresorerie", ttl=0)
             if not df_all.empty:
-                recettes = df_all[df_all['Type'] == "Recette"]['Montant'].sum()
-                depenses = df_all[df_all['Type'] == "Dépense"]['Montant'].sum()
-                solde = recettes - depenses
-                
+                rec = df_all[df_all['Type'] == "Recette"]['Montant'].sum()
+                dep = df_all[df_all['Type'] == "Dépense"]['Montant'].sum()
                 m1, m2, m3 = st.columns(3)
-                m1.metric("Total Recettes", f"{recettes:,.0f} $")
-                m2.metric("Total Dépenses", f"{depenses:,.0f} $")
-                m3.metric("Solde Coffre", f"{solde:,.0f} $", delta=float(solde))
-                
-                st.write("#### Historique complet")
-                st.dataframe(df_all.sort_values(by="Date", ascending=False), use_container_width=True)
-            else: st.info("Aucune transaction enregistrée.")
-        except: st.warning("Créez un onglet 'Tresorerie' dans votre Google Sheets.")
+                m1.metric("Recettes Totales", f"{rec:,.0f} $")
+                m2.metric("Dépenses Totales", f"{dep:,.0f} $")
+                m3.metric("SOLDE DU COFFRE", f"{rec-dep:,.0f} $")
+        except: pass
+
+        st.markdown("---")
+        # Section 2 : Formulaire de saisie
+        with st.form("admin_compta"):
+            st.write("#### ➕ Ajouter une transaction")
+            c1, c2, c3 = st.columns(3)
+            t_type = c1.selectbox("Nature", ["Recette", "Dépense"])
+            t_cat = c2.text_input("Catégorie (Loyer, Blanchiment, Armes...)")
+            t_mont = c3.number_input("Montant ($)", min_value=0)
+            t_note = st.text_area("Justification (ex: Blanchiment 20%)")
+            
+            if st.form_submit_button("Valider la transaction"):
+                try:
+                    new_op = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": t_type, "Catégorie": t_cat, "Montant": float(t_mont), "Note": t_note}])
+                    df_c = conn.read(worksheet="Tresorerie", ttl=0)
+                    conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_op], ignore_index=True))
+                    st.success("Transaction archivée.")
+                    st.rerun()
+                except Exception as e: st.error(f"Erreur : {e}")
+
+        # Section 3 : Historique
+        st.markdown("---")
+        st.write("#### 📝 Historique des mouvements")
+        try:
+            df_v = conn.read(worksheet="Tresorerie", ttl=0)
+            if not df_v.empty:
+                st.dataframe(df_v.sort_values(by="Date", ascending=False), use_container_width=True)
+            else: st.info("Le coffre est vide.")
+        except: st.warning("Vérifiez l'onglet 'Tresorerie' sur GSheets.")
