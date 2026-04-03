@@ -16,47 +16,49 @@ USERS = {
 # --- STYLE CSS ULTIME (FORCE LA BRUME PARTOUT) ---
 st.markdown("""
     <style>
-    /* 1. On force la transparence de tous les blocs Streamlit */
+    /* Force la transparence pour voir l'animation derrière */
     .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], .main {
         background: transparent !important;
     }
 
-    /* Fond noir de base sous l'animation */
+    /* Fond noir total en dessous */
     body { background-color: #000000 !important; }
 
-    /* 2. L'ANIMATION DE LA BRUME (FIXÉE AU FOND) */
+    /* L'ANIMATION DE LA BRUME */
     .fogwrapper {
         height: 100vh; position: fixed; top: 0; left: 0; width: 100vw;
         z-index: -10; overflow: hidden; pointer-events: none;
     }
+    
     .foglayer {
-    position: absolute;
-    height: 100%;
-    width: 200%;
-    /* On crée une texture de nuages avec des dégradés radiaux superposés */
-    background-image: 
-        radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15) 0%, transparent 25%),
-        radial-gradient(circle at 70% 80%, rgba(255,255,255,0.1) 0%, transparent 30%),
-        radial-gradient(circle at 40% 20%, rgba(255,255,255,0.12) 0%, transparent 20%),
-        radial-gradient(circle at 80% 40%, rgba(255,255,255,0.08) 0%, transparent 35%);
-    background-size: 50% 100%;
-    filter: blur(40px); /* On floute énormément pour l'effet fumée */
-}
+        position: absolute; height: 100%; width: 200%;
+        /* Image de brume blanche sur fond transparent */
+        background: url("https://www.transparenttextures.com/patterns/fog.png") repeat-x;
+        background-size: contain;
     }
-    #layer1 { animation: fogmove 30s linear infinite; opacity: 0.3; }
-    #layer2 { animation: fogmove 50s linear infinite; opacity: 0.15; top: 50px; }
+
+    /* Calque 1 : Rapide et plus visible */
+    #layer1 { 
+        animation: fogmove 25s linear infinite; 
+        opacity: 0.6; 
+        filter: brightness(150%);
+    }
+
+    /* Calque 2 : Plus lent et profond */
+    #layer2 { 
+        animation: fogmove 45s linear infinite; 
+        opacity: 0.3; 
+        top: 100px;
+    }
 
     @keyframes fogmove {
         from { transform: translate3d(0, 0, 0); }
         to { transform: translate3d(-50%, 0, 0); }
     }
 
-    /* 3. LISIBILITÉ DU CONTENU */
-    .stForm { background-color: rgba(15, 15, 15, 0.8) !important; border: 1px solid #333 !important; }
+    /* --- LISIBILITÉ DU CONTENU --- */
+    .stForm { background-color: rgba(10, 10, 10, 0.85) !important; border: 1px solid #444 !important; }
     h1, h2, h3, h4, p, label { color: white !important; font-family: 'Courier New'; text-shadow: 2px 2px 4px #000; }
-    
-    /* Sidebar semi-transparente */
-    [data-testid="stSidebar"] { background-color: rgba(10, 10, 10, 0.9) !important; }
     </style>
 
     <div class="fogwrapper">
