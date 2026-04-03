@@ -144,7 +144,7 @@ else:
                 b = st.number_input("💵 Total vente ($)", min_value=0, key="drb")
                 if st.form_submit_button("TRANSMETTRE DROGUE"): handle_submit("Drogue", butin=b, drogue=d, quantite=q)
 
-        # --- STATS HEBDOMADAIRES ---
+        # --- STATS HEBDOMADAIRES (CORRIGÉ) ---
         st.markdown("---")
         st.write("### 📊 STATISTIQUES DE LA SEMAINE")
         try:
@@ -156,10 +156,14 @@ else:
                 week_data = data[data['Date'] >= start_week].copy()
 
                 if not week_data.empty:
-                    stats_actions = week_data[week_data['Action'] != "Drogue"].groupby('Membre').agg({'Action': 'count', 'Butin': 'sum'}).reset_index().rename(columns={'Butin': 'Argent_Actions'})
-                    stats_drogue = week_data[week_data['Action'] == "Drogue"].groupby('Membre').agg({'Quantite': 'sum', 'Butin': 'sum'}).reset_index().rename(columns={'Butin': 'Argent_Drogue'})
+                    # On prépare les stats
+                    stats_actions = week_data[week_data['Action'] != "Drogue"].groupby('Membre').agg({'Action': 'count', 'Butin': 'sum'}).reset_index()
+                    stats_drogue = week_data[week_data['Action'] == "Drogue"].groupby('Membre').agg({'Quantite': 'sum', 'Butin': 'sum'}).reset_index()
+                    
+                    # Fusion des deux tableaux
                     stats = pd.merge(stats_actions, stats_drogue, on='Membre', how='outer').fillna(0)
 
+                    # Affichage des barres de progression
                     for _, row in stats.iterrows():
                         c1, c2, c3 = st.columns([1, 2, 2])
                         c1.write(f"**{row['Membre']}**")
@@ -169,9 +173,21 @@ else:
                         c3.progress(min(v_dro/300, 1.0), text=f"Drogue: {v_dro}/300")
 
                     st.write("#### 💸 Récapitulatif des Gains")
-                    st.table(stats[['Membre', 'Argent_Actions', 'Argent_Drogue']])
-                else: st.info("Aucune activité cette semaine.")
-        except: st.info("Synchronisation...")
+                    
+                    # --- MODIFICATION DEMANDÉE ICI ---
+                    # On crée un nouveau tableau propre pour l'affichage final
+                    df_recap = stats[['Membre', 'Butin_x', 'Butin_y']].copy()
+                    df_recap.columns = ['Membre', 'Actions', 'Drogue'] # On renomme les colonnes
+                    
+                    # Formatage des prix (ex: 1 234 $)
+                    df_recap['Actions'] = df_recap['Actions'].apply(lambda x: f"{int(x):,} $".replace(',', ' '))
+                    df_recap['Drogue'] = df_recap['Drogue'].apply(lambda x: f"{int(x):,} $".replace(',', ' '))
+                    
+                    st.table(df_recap)
+                else: 
+                    st.info("Aucune activité cette semaine.")
+        except Exception as e: 
+            st.info("Synchronisation des données...")
 
     # --- PAGE 2 : COMPTABILITÉ GLOBALE ---
     elif choice == "Comptabilité Globale":
