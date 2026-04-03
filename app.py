@@ -8,7 +8,7 @@ import time
 st.set_page_config(page_title="La Niebla - FlashBack FA", page_icon="🥷", layout="wide")
 
 # --- 2. LIEN DE LA VIDÉO (FONCTIONNEL) ---
-VIDEO_URL = "https://assets.mixkit.co/videos/preview/mixkit-mysterious-pale-fog-moving-slowly-over-the-ground-44130-large.mp4"
+VIDEO_URL = "https://fr.pikbest.com/video/smoke-fog-loop-overlay-animation-video-transparent-background-with-alpha-channel_9172106.html"
 
 # --- 3. STYLE CSS "LOS SANTOS" & TITRE ---
 st.markdown(f"""
