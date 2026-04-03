@@ -6,7 +6,7 @@ import time
 
 st.set_page_config(page_title="La Niebla", layout="wide")
 
-STYLE GLOBAL
+
 st.markdown("""
 <style>
 
