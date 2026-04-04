@@ -59,6 +59,7 @@ USERS = {
     "Alex": {"password": "Alx220717", "pseudo": "Alex Smith"},
     "Dany": {"password": "081219", "pseudo": "Dany Smith"},
     "Emilio": {"password": "azertyuiop123", "pseudo": "Emilio Montoya"},
+    "Aziz": {"password": "asmith", "pseudo": "Aziz Smith"},
 }
 
 if 'connected' not in st.session_state:
