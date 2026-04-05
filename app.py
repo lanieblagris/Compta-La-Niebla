@@ -235,19 +235,4 @@ else:
                 st.dataframe(df_view.sort_index(ascending=False).head(10), use_container_width=True)
         except: pass
 
-        # Footer Stats Globales
-        st.markdown("---")
-        try:
-            df_all = conn.read(worksheet="Tresorerie", ttl=0)
-            if not df_all.empty:
-                df_calc = df_all.dropna(subset=['Montant', 'Type', 'Etat'])
-                rec_p = df_calc[(df_calc['Type']=="Recette") & (df_calc['Etat']=="Propre")]['Montant'].sum()
-                dep_p = df_calc[(df_calc['Type']=="Dépense") & (df_calc['Etat']=="Propre")]['Montant'].sum()
-                rec_s = df_calc[(df_calc['Type']=="Recette") & (df_calc['Etat']=="Sale")]['Montant'].sum()
-                dep_s = df_calc[(df_calc['Type']=="Dépense") & (df_calc['Etat']=="Sale")]['Montant'].sum()
-                m1, m2, m3 = st.columns(3)
-                m1.metric("SOLDE PROPRE", f"{rec_p - dep_p:,.0f} $")
-                m2.metric("SOLDE SALE", f"{rec_s - dep_s:,.0f} $")
-                m3.metric("TOTAL GLOBAL", f"{(rec_p + rec_s) - (dep_p + dep_s):,.0f} $")
-                st.dataframe(df_all.sort_values(by="Date", ascending=False), use_container_width=True)
-        except: pass
+      
