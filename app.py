@@ -178,6 +178,27 @@ else:
                     except Exception as e:
                         st.error(f"Erreur Sheets : {e}")
 
+                          # --- 2. BLANCHIMENT ---
+        with sub_tabs[1]:
+            st.write("#### 🧼 Blanchisseur")
+            with st.form("blanchiment_form"):
+                col_a, col_b = st.columns(2)
+                m_sale = col_a.number_input("Montant sale ($)", min_value=0)
+                taux = col_b.slider("Taux (%)", 0, 100, 20)
+                propre = m_sale * (1 - taux/100)
+                if st.form_submit_button("BLANCHIR"):
+                    op_s = {"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Dépense", "Etat": "Sale", "Catégorie": "Blanchiment", "Montant": float(m_sale), "Note": "Sortie blanchiment"}
+                    op_p = {"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Recette", "Etat": "Propre", "Catégorie": "Blanchiment", "Montant": float(propre), "Note": f"Retour blanchiment (-{taux}%)"}
+                    for _ in range(3):
+                        try:
+                            df_t = conn.read(worksheet="Tresorerie", ttl=0)
+                            conn.update(worksheet="Tresorerie", data=pd.concat([df_t, pd.DataFrame([op_s, op_p])], ignore_index=True))
+                            st.success("Blanchi !"); time.sleep(1); st.rerun()
+                            break
+                        except: time.sleep(1)
+
+
+
         with sub_tabs[2]: # STOCKS
             st.write("#### 📦 État des Stocks")
             with st.form("add_stock"):
@@ -212,4 +233,21 @@ else:
                 c2.metric("SOLDE SALE", f"{sale:,.0f} $")
                 c3.metric("TOTAL GLOBAL", f"{(propre+sale):,.0f} $")
                 st.dataframe(df_view.sort_index(ascending=False).head(10), use_container_width=True)
+        except: pass
+
+        # Footer Stats Globales
+        st.markdown("---")
+        try:
+            df_all = conn.read(worksheet="Tresorerie", ttl=0)
+            if not df_all.empty:
+                df_calc = df_all.dropna(subset=['Montant', 'Type', 'Etat'])
+                rec_p = df_calc[(df_calc['Type']=="Recette") & (df_calc['Etat']=="Propre")]['Montant'].sum()
+                dep_p = df_calc[(df_calc['Type']=="Dépense") & (df_calc['Etat']=="Propre")]['Montant'].sum()
+                rec_s = df_calc[(df_calc['Type']=="Recette") & (df_calc['Etat']=="Sale")]['Montant'].sum()
+                dep_s = df_calc[(df_calc['Type']=="Dépense") & (df_calc['Etat']=="Sale")]['Montant'].sum()
+                m1, m2, m3 = st.columns(3)
+                m1.metric("SOLDE PROPRE", f"{rec_p - dep_p:,.0f} $")
+                m2.metric("SOLDE SALE", f"{rec_s - dep_s:,.0f} $")
+                m3.metric("TOTAL GLOBAL", f"{(rec_p + rec_s) - (dep_p + dep_s):,.0f} $")
+                st.dataframe(df_all.sort_values(by="Date", ascending=False), use_container_width=True)
         except: pass
