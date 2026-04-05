@@ -45,7 +45,7 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 def load_data(sheet):
     return conn.read(worksheet=sheet)
 
-# --- 4. BASE DE DONNÉES UTILISATEURS MIS À JOUR ---
+# --- 4. BASE DE DONNÉES UTILISATEURS (FIXE) ---
 USERS = {
     "Admin": {"password": "0000", "pseudo": "El Patron"},
     "Alex": {"password": "Alx220717", "pseudo": "Alex Smith"},
@@ -83,12 +83,17 @@ else:
     with st.sidebar:
         st.write(f"### 🥷 {st.session_state['user_pseudo']}")
         menu = ["Tableau de bord"]
-        if st.session_state['user_role'] == "Admin": menu.append("Comptabilité Globale")
+        # Seul l'Admin voit la Compta Globale
+        if st.session_state['user_role'] == "Admin": 
+            menu.append("Comptabilité Globale")
+        
         choice = st.radio("Navigation", menu)
+        
         if st.button("Déconnexion"):
             st.session_state['connected'] = False
             st.rerun()
 
+    # --- TABS MEMBRES ---
     if choice == "Tableau de bord":
         st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
         st.markdown('<div class="lore-quote">"Le Gris n\'est pas qu\'une couleur, c\'est une attitude."</div>', unsafe_allow_html=True)
@@ -97,8 +102,6 @@ else:
         st.markdown(f'<div style="text-align:center;"><img src="{LOGO_URL}" style="width:100%; max-height:200px; object-fit:cover; border-radius:10px; margin-bottom:20px;"></div>', unsafe_allow_html=True)
         
         tabs = st.tabs(["💰 ATM", "🛒 Supérette", "🏎️ Go Fast", "🏠 Cambriolage", "🌿 Drogue"])
-
-        # LISTE DES DROGUES
         DRUG_LIST = ["Marijuana", "Cocaine", "Meth", "Heroine", "Tranq", "Carte Prépayer", "B-magic", "Crack", "Autre"]
 
         def handle_submit(action, butin=0, drogue="N/A", quantite=0):
@@ -115,14 +118,12 @@ else:
                     st.cache_data.clear()
                     success = True
                     break
-                except:
-                    time.sleep(1)
+                except: time.sleep(1)
             if success:
                 st.success("Transmis avec succès.")
                 time.sleep(1); st.rerun()
             else: st.error("Erreur de synchronisation.")
 
-        # --- FORMULAIRES DE BORD ---
         with tabs[0]:
             with st.form("atm"):
                 b = st.number_input("💵 Butin ($)", min_value=0, key="b_atm")
@@ -147,10 +148,8 @@ else:
                 q = st.number_input("📦 Quantité vendue", min_value=0.0)
                 b = st.number_input("💵 Prix de vente ($)", min_value=0)
                 if st.form_submit_button("VALIDER VENTE"): 
-                    if d_select == "Autre" and not d_final:
-                        st.error("Veuillez nommer le produit 'Autre'.")
-                    else:
-                        handle_submit("Drogue", butin=b, drogue=d_final, quantite=-abs(q))
+                    if d_select == "Autre" and not d_final: st.error("Veuillez nommer le produit.")
+                    else: handle_submit("Drogue", butin=b, drogue=d_final, quantite=-abs(q))
 
         # --- STATS HEBDO ---
         st.markdown("---")
@@ -176,11 +175,11 @@ else:
             c2.progress(min(int(row['Action'])/20, 1.0), text=f"Actions: {int(row['Action'])}")
             c3.progress(min(int(row['Quantite'])/300, 1.0), text=f"Ventes: {int(row['Quantite'])}")
 
+    # --- COMPTABILITE ADMIN ---
     elif choice == "Comptabilité Globale":
         st.markdown('<div class="gta-title">Tresorerie</div>', unsafe_allow_html=True)
         sub_tabs = st.tabs(["📊 Vue d'ensemble", "🧼 Blanchiment", "📦 Gestion des Stocks"])
-        DRUG_LIST = ["Marijuana", "Cocaine", "Meth", "Heroine", "Tranq", "Carte Prépayer", "B-magic", "Crack", "Autre"]
-
+        
         with sub_tabs[0]: # VUE ENSEMBLE
             with st.form("compta_form"):
                 st.write("#### Opération Manuelle")
@@ -192,42 +191,18 @@ else:
                 t_note = st.text_area("Note")
                 if st.form_submit_button("Valider"):
                     new_op = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": t_type, "Etat": t_etat, "Catégorie": t_cat, "Montant": float(t_montant), "Note": t_note}])
-                    for _ in range(3):
-                        try:
-                            df_c = conn.read(worksheet="Tresorerie", ttl=0)
-                            conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_op], ignore_index=True))
-                            st.cache_data.clear(); st.success("Validé."); time.sleep(1); st.rerun(); break
-                        except: time.sleep(1)
+                    try:
+                        df_c = conn.read(worksheet="Tresorerie", ttl=0)
+                        conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_op], ignore_index=True))
+                        st.cache_data.clear(); st.success("Validé."); time.sleep(1); st.rerun()
+                    except: st.error("Erreur Sheets")
 
-        with sub_tabs[2]: # GESTION STOCKS
+        with sub_tabs[2]: # STOCKS
             st.write("#### 📦 État des Stocks")
             with st.form("add_stock"):
                 st.write("➕ AJOUTER UN ARRIVAGE")
                 c1, c2 = st.columns(2)
-                d_name_sel = c1.selectbox("Produit", DRUG_LIST)
+                d_name_sel = c1.selectbox("Produit", ["Marijuana", "Cocaine", "Meth", "Heroine", "Tranq", "Carte Prépayer", "B-magic", "Crack", "Autre"])
                 d_name_final = d_name_sel
-                if d_name_sel == "Autre":
-                    d_name_final = st.text_input("Nom du produit spécifique")
-                d_qty = c2.number_input("Quantité", min_value=0.0)
-                if st.form_submit_button("VALIDER L'ARRIVAGE"):
-                    if d_name_sel == "Autre" and not d_name_final:
-                        st.error("Nommez le produit.")
-                    else:
-                        new_s = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Membre": "LA NIEBLA", "Action": "Drogue", "Drogue": d_name_final, "Quantite": float(d_qty), "Butin": 0}])
-                        for _ in range(3):
-                            try:
-                                df_all_r = conn.read(worksheet="Rapports", ttl=0)
-                                conn.update(worksheet="Rapports", data=pd.concat([df_all_r, new_s], ignore_index=True))
-                                st.cache_data.clear(); st.success("Stock mis à jour !"); time.sleep(1); st.rerun(); break
-                            except: time.sleep(1)
-
-            st.write("---")
-            try:
-                df_rep = load_data("Rapports")
-                if not df_rep.empty:
-                    df_drugs = df_rep[df_rep['Action'] == "Drogue"].copy()
-                    stock_final = df_drugs.groupby('Drogue')['Quantite'].sum().reset_index()
-                    cols = st.columns(4)
-                    for i, row in stock_final.iterrows():
-                        cols[i % 4].metric(row['Drogue'], f"{row['Quantite']:.1f} u")
-            except: pass
+                if d_name_sel == "Autre": d_name_final = st.text_input("Nom spécifique")
+                d_qty = c
