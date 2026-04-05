@@ -4,8 +4,20 @@ import pandas as pd
 import datetime
 import time
 
-# --- 1. CONFIGURATION DE LA PAGE ---
+# --- 1. CONFIGURATION ET CONSTANTES GLOBALES ---
 st.set_page_config(page_title="La Niebla - FlashBack FA", page_icon="🥷", layout="wide")
+
+# On définit les listes ici pour qu'elles soient accessibles partout dans le code
+DRUG_LIST = ["Marijuana", "Cocaine", "Meth", "Heroine", "Tranq", "Carte Prépayer", "B-magic", "Crack", "Autre"]
+
+USERS = {
+    "Admin": {"password": "0000", "pseudo": "El Patron"},
+    "Alex": {"password": "Alx220717", "pseudo": "Alex Smith"},
+    "Dany": {"password": "081219", "pseudo": "Dany Smith"},
+    "Emilio": {"password": "azertyuiop123", "pseudo": "Emilio Montoya"},
+    "Aziz": {"password": "asmith", "pseudo": "Aziz Smith"},
+    "Junior": {"password": "Loup1304", "pseudo": "Madra Junior"},
+}
 
 # --- 2. STYLE CSS & BACKGROUND ---
 VIDEO_URL = "https://assets.mixkit.co/videos/preview/mixkit-mysterious-pale-fog-moving-slowly-over-the-ground-44130-large.mp4"
@@ -38,21 +50,16 @@ st.markdown(f"""
     <video autoplay loop muted playsinline id="bgVideo"><source src="{VIDEO_URL}" type="video/mp4"></video>
     """, unsafe_allow_html=True)
 
-# --- 3. CONNEXION ---
+# --- 3. CONNEXION ET SESSIONS ---
 conn = st.connection("gsheets", type=GSheetsConnection)
-
-# --- 4. UTILISATEURS ---
-USERS = {
-    "Admin": {"password": "0000", "pseudo": "El Patron"},
-    "Alex": {"password": "Alx220717", "pseudo": "Alex Smith"},
-    "Dany": {"password": "081219", "pseudo": "Dany Smith"},
-    "Emilio": {"password": "azertyuiop123", "pseudo": "Emilio Montoya"},
-    "Aziz": {"password": "asmith", "pseudo": "Aziz Smith"},
-    "Junior": {"password": "Loup1304", "pseudo": "Madra Junior"},
-}
 
 if 'connected' not in st.session_state:
     st.session_state['connected'] = False
+if "form_key" not in st.session_state:
+    st.session_state.form_key = 0
+
+def reset_form():
+    st.session_state.form_key += 1
 
 def check_login():
     u = st.session_state.get("user_login")
@@ -62,15 +69,7 @@ def check_login():
         st.session_state['user_role'] = u
         st.session_state['user_pseudo'] = USERS[u]["pseudo"]
 
-# --- 5. LOGIQUE DE RESET ---
-# Pour vider les champs proprement sans erreur, on utilise une clé de formulaire
-if "form_key" not in st.session_state:
-    st.session_state.form_key = 0
-
-def reset_form():
-    st.session_state.form_key += 1
-
-# --- 6. AFFICHAGE ---
+# --- 4. AFFICHAGE ---
 if not st.session_state['connected']:
     st.write("<br><br><br>", unsafe_allow_html=True)
     st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
@@ -99,27 +98,19 @@ else:
         st.markdown(f'<div style="text-align:center;"><img src="{LOGO_URL}" style="width:100%; max-height:200px; object-fit:cover; border-radius:10px; margin-bottom:20px;"></div>', unsafe_allow_html=True)
         
         tabs = st.tabs(["💰 ATM", "🛒 Supérette", "🏎️ Go Fast", "🏠 Cambriolage", "🌿 Drogue"])
-        DRUG_LIST = ["Marijuana", "Cocaine", "Meth", "Heroine", "Tranq", "Carte Prépayer", "B-magic", "Crack", "Autre"]
 
         def handle_submit(action, butin=0, drogue="N/A", quantite=0):
             try:
                 new_row_rep = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Membre": st.session_state['user_pseudo'], "Action": action, "Drogue": drogue, "Quantite": float(quantite), "Butin": float(butin)}])
                 new_row_treso = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Recette", "Etat": "Sale", "Catégorie": action, "Montant": float(butin), "Note": f"Rapport de {st.session_state['user_pseudo']}"}])
-                
                 df_rep = conn.read(worksheet="Rapports", ttl=0)
                 df_treso = conn.read(worksheet="Tresorerie", ttl=0)
-                
                 conn.update(worksheet="Rapports", data=pd.concat([df_rep, new_row_rep], ignore_index=True))
                 conn.update(worksheet="Tresorerie", data=pd.concat([df_treso, new_row_treso], ignore_index=True))
-                
                 st.success("Transmis avec succès.")
-                time.sleep(1)
-                reset_form()
-                st.rerun()
-            except Exception as e:
-                st.error(f"Erreur : {e}")
+                time.sleep(1); reset_form(); st.rerun()
+            except Exception as e: st.error(f"Erreur : {e}")
 
-        # Utilisation de form_key pour réinitialiser tous les champs d'un coup
         with tabs[0]:
             with st.form(key=f"atm_{st.session_state.form_key}"):
                 b = st.number_input("💵 Butin ($)", min_value=0)
@@ -142,10 +133,9 @@ else:
                 if d_select == "Autre": d_final = st.text_input("Nom spécifique")
                 q = st.number_input("📦 Quantité", min_value=0.0)
                 b = st.number_input("💵 Prix total ($)", min_value=0)
-                if st.form_submit_button("VALIDER VENTE"): 
-                    handle_submit("Drogue", butin=b, drogue=d_final, quantite=-abs(q))
+                if st.form_submit_button("VALIDER VENTE"): handle_submit("Drogue", butin=b, drogue=d_final, quantite=-abs(q))
 
-        # --- SECTION STATISTIQUES (PATRON MASQUÉ) ---
+        # --- STATISTIQUES (SANS LE PATRON) ---
         st.markdown("---")
         st.write("### 📊 STATISTIQUES DE LA SEMAINE")
         try:
@@ -154,15 +144,12 @@ else:
                 df_stats['Date'] = pd.to_datetime(df_stats['Date'], errors='coerce')
                 start_week = (datetime.datetime.now() - datetime.timedelta(days=datetime.datetime.now().weekday())).replace(hour=0, minute=0, second=0)
                 week_data = df_stats[df_stats['Date'] >= start_week].copy()
-
                 for p_id, p_info in USERS.items():
-                    # FILTRE : On ignore l'Admin (El Patron) dans l'affichage
-                    if p_id != "Admin":
+                    if p_id != "Admin": # Cache le patron
                         pseudo = p_info["pseudo"]
                         user_data = week_data[week_data['Membre'] == pseudo]
                         nb_actions = len(user_data[user_data['Action'] != "Drogue"])
                         nb_ventes = abs(user_data[user_data['Action'] == "Drogue"]['Quantite'].sum())
-                        
                         c1, c2, c3 = st.columns([1, 2, 2])
                         c1.write(f"**{pseudo}**")
                         c2.progress(min(float(nb_actions)/20, 1.0), text=f"Actions: {nb_actions}")
@@ -207,6 +194,7 @@ else:
                     except: st.error("Erreur.")
 
         with sub_tabs[2]:
+            # CORRECTION : Ajout du bouton submit manquant et utilisation de la liste globale
             with st.form(key=f"stk_{st.session_state.form_key}"):
                 st.write("#### 📦 Gestion des Stocks")
                 cs1, cs2 = st.columns(2)
@@ -218,9 +206,9 @@ else:
                         df_all_r = conn.read(worksheet="Rapports", ttl=0)
                         conn.update(worksheet="Rapports", data=pd.concat([df_all_r, new_s], ignore_index=True))
                         st.success("Stock mis à jour !"); time.sleep(1); reset_form(); st.rerun()
-                    except: st.error("Erreur.")
+                    except: st.error("Erreur Sheets.")
 
-        # Affichage financier
+        # --- AFFICHAGE FINANCIER ---
         try:
             df_view = conn.read(worksheet="Tresorerie", ttl=0)
             if not df_view.empty:
