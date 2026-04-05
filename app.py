@@ -45,7 +45,7 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 def load_data(sheet):
     return conn.read(worksheet=sheet)
 
-# --- 4. BASE DE DONNÉES UTILISATEURS (FIXE) ---
+# --- 4. UTILISATEURS ---
 USERS = {
     "Admin": {"password": "0000", "pseudo": "El Patron"},
     "Alex": {"password": "Alx220717", "pseudo": "Alex Smith"},
@@ -66,7 +66,7 @@ def check_login():
         st.session_state['user_role'] = u
         st.session_state['user_pseudo'] = USERS[u]["pseudo"]
 
-# --- 5. LOGIQUE D'AFFICHAGE ---
+# --- 5. LOGIQUE ---
 if not st.session_state['connected']:
     st.write("<br><br><br>", unsafe_allow_html=True)
     st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
@@ -83,17 +83,13 @@ else:
     with st.sidebar:
         st.write(f"### 🥷 {st.session_state['user_pseudo']}")
         menu = ["Tableau de bord"]
-        # Seul l'Admin voit la Compta Globale
         if st.session_state['user_role'] == "Admin": 
             menu.append("Comptabilité Globale")
-        
         choice = st.radio("Navigation", menu)
-        
         if st.button("Déconnexion"):
             st.session_state['connected'] = False
             st.rerun()
 
-    # --- TABS MEMBRES ---
     if choice == "Tableau de bord":
         st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
         st.markdown('<div class="lore-quote">"Le Gris n\'est pas qu\'une couleur, c\'est une attitude."</div>', unsafe_allow_html=True)
@@ -120,9 +116,9 @@ else:
                     break
                 except: time.sleep(1)
             if success:
-                st.success("Transmis avec succès.")
+                st.success("Archives mises à jour.")
                 time.sleep(1); st.rerun()
-            else: st.error("Erreur de synchronisation.")
+            else: st.error("Erreur de connexion.")
 
         with tabs[0]:
             with st.form("atm"):
@@ -143,39 +139,32 @@ else:
             with st.form("dr"):
                 d_select = st.selectbox("🌿 Produit", DRUG_LIST)
                 d_final = d_select
-                if d_select == "Autre":
-                    d_final = st.text_input("Précisez le nom du produit")
-                q = st.number_input("📦 Quantité vendue", min_value=0.0)
-                b = st.number_input("💵 Prix de vente ($)", min_value=0)
+                if d_select == "Autre": d_final = st.text_input("Nom spécifique")
+                q = st.number_input("📦 Quantité", min_value=0.0)
+                b = st.number_input("💵 Prix total ($)", min_value=0)
                 if st.form_submit_button("VALIDER VENTE"): 
-                    if d_select == "Autre" and not d_final: st.error("Veuillez nommer le produit.")
+                    if d_select == "Autre" and not d_final: st.error("Précisez le produit.")
                     else: handle_submit("Drogue", butin=b, drogue=d_final, quantite=-abs(q))
 
-        # --- STATS HEBDO ---
+        # --- STATS ---
         st.markdown("---")
         st.write("### 📊 STATISTIQUES DE LA SEMAINE")
-        all_members = [u["pseudo"] for u in USERS.values()]
-        stats = pd.DataFrame({'Membre': all_members, 'Action': [0]*len(all_members), 'Butin_x': [0.0]*len(all_members), 'Quantite': [0.0]*len(all_members), 'Butin_y': [0.0]*len(all_members)})
         try:
             data = load_data("Rapports")
-            if data is not None and not data.empty:
+            if not data.empty:
                 data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
                 start_week = (datetime.datetime.now() - datetime.timedelta(days=datetime.datetime.now().weekday())).replace(hour=0, minute=0)
                 week_data = data[data['Date'] >= start_week].copy()
-                if not week_data.empty:
-                    s_act = week_data[week_data['Action'] != "Drogue"].groupby('Membre').agg({'Action': 'count', 'Butin': 'sum'}).reset_index()
-                    s_dro = week_data[week_data['Action'] == "Drogue"].groupby('Membre').agg({'Quantite': lambda x: abs(x).sum(), 'Butin': 'sum'}).reset_index()
-                    current_stats = pd.merge(s_act, s_dro, on='Membre', how='outer').fillna(0)
-                    stats = pd.merge(stats[['Membre']], current_stats, on='Membre', how='left').fillna(0)
+                for p in [u["pseudo"] for u in USERS.values()]:
+                    p_data = week_data[week_data['Membre'] == p]
+                    nb_a = len(p_data[p_data['Action'] != "Drogue"])
+                    nb_d = abs(p_data[p_data['Action'] == "Drogue"]['Quantite'].sum())
+                    c1, c2, c3 = st.columns([1, 2, 2])
+                    c1.write(f"**{p}**")
+                    c2.progress(min(nb_a/20, 1.0), text=f"Actions: {nb_a}")
+                    c3.progress(min(nb_d/300, 1.0), text=f"Ventes: {int(nb_d)}")
         except: pass
 
-        for _, row in stats.iterrows():
-            c1, c2, c3 = st.columns([1, 2, 2])
-            c1.write(f"**{row['Membre']}**")
-            c2.progress(min(int(row['Action'])/20, 1.0), text=f"Actions: {int(row['Action'])}")
-            c3.progress(min(int(row['Quantite'])/300, 1.0), text=f"Ventes: {int(row['Quantite'])}")
-
-    # --- COMPTABILITE ADMIN ---
     elif choice == "Comptabilité Globale":
         st.markdown('<div class="gta-title">Tresorerie</div>', unsafe_allow_html=True)
         sub_tabs = st.tabs(["📊 Vue d'ensemble", "🧼 Blanchiment", "📦 Gestion des Stocks"])
@@ -183,11 +172,11 @@ else:
         with sub_tabs[0]: # VUE ENSEMBLE
             with st.form("compta_form"):
                 st.write("#### Opération Manuelle")
-                c1, c2, c3, c4 = st.columns(4)
-                t_type = c1.selectbox("Type", ["Recette", "Dépense"])
-                t_etat = c2.selectbox("Argent", ["Sale", "Propre"])
-                t_cat = c3.text_input("Catégorie")
-                t_montant = c4.number_input("Montant ($)", min_value=0)
+                col1, col2, col3, col4 = st.columns(4)
+                t_type = col1.selectbox("Type", ["Recette", "Dépense"])
+                t_etat = col2.selectbox("Argent", ["Sale", "Propre"])
+                t_cat = col3.text_input("Catégorie")
+                t_montant = col4.number_input("Montant ($)", min_value=0)
                 t_note = st.text_area("Note")
                 if st.form_submit_button("Valider"):
                     new_op = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": t_type, "Etat": t_etat, "Catégorie": t_cat, "Montant": float(t_montant), "Note": t_note}])
@@ -201,8 +190,26 @@ else:
             st.write("#### 📦 État des Stocks")
             with st.form("add_stock"):
                 st.write("➕ AJOUTER UN ARRIVAGE")
-                c1, c2 = st.columns(2)
-                d_name_sel = c1.selectbox("Produit", ["Marijuana", "Cocaine", "Meth", "Heroine", "Tranq", "Carte Prépayer", "B-magic", "Crack", "Autre"])
-                d_name_final = d_name_sel
-                if d_name_sel == "Autre": d_name_final = st.text_input("Nom spécifique")
-                d_qty = c
+                cs1, cs2 = st.columns(2) # Correction ici (pas de variable 'c')
+                d_n_sel = cs1.selectbox("Produit", ["Marijuana", "Cocaine", "Meth", "Heroine", "Tranq", "Carte Prépayer", "B-magic", "Crack", "Autre"])
+                d_n_fin = d_n_sel
+                if d_n_sel == "Autre": d_n_fin = st.text_input("Nom spécifique")
+                d_qty = cs2.number_input("Quantité", min_value=0.0)
+                if st.form_submit_button("VALIDER L'ARRIVAGE"):
+                    new_s = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Membre": "LA NIEBLA", "Action": "Drogue", "Drogue": d_n_fin, "Quantite": float(d_qty), "Butin": 0}])
+                    try:
+                        df_all_r = conn.read(worksheet="Rapports", ttl=0)
+                        conn.update(worksheet="Rapports", data=pd.concat([df_all_r, new_s], ignore_index=True))
+                        st.cache_data.clear(); st.success("Stock mis à jour !"); time.sleep(1); st.rerun()
+                    except: st.error("Erreur Sheets")
+
+            st.write("---")
+            try:
+                df_rep_s = load_data("Rapports")
+                if not df_rep_s.empty:
+                    df_drugs = df_rep_s[df_rep_s['Action'] == "Drogue"].copy()
+                    stock_f = df_drugs.groupby('Drogue')['Quantite'].sum().reset_index()
+                    cols_s = st.columns(4)
+                    for i, row in stock_f.iterrows():
+                        cols_s[i % 4].metric(row['Drogue'], f"{row['Quantite']:.1f} u")
+            except: pass
