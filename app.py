@@ -149,7 +149,7 @@ else:
                 if st.form_submit_button("VALIDER VENTE"): 
                     handle_submit("Drogue", butin=b, drogue=d_final, quantite=-abs(q))
 
-        # --- SECTION STATISTIQUES (SUIVI DES GARS) ---
+        # --- SECTION STATISTIQUES (SANS LE PATRON) ---
         st.markdown("---")
         st.write("### 📊 STATISTIQUES DE LA SEMAINE")
         try:
@@ -161,15 +161,17 @@ else:
                 week_data = df_stats[df_stats['Date'] >= start_week].copy()
 
                 for p_id, p_info in USERS.items():
-                    pseudo = p_info["pseudo"]
-                    user_data = week_data[week_data['Membre'] == pseudo]
-                    nb_actions = len(user_data[user_data['Action'] != "Drogue"])
-                    nb_ventes = abs(user_data[user_data['Action'] == "Drogue"]['Quantite'].sum())
-                    
-                    c1, c2, c3 = st.columns([1, 2, 2])
-                    c1.write(f"**{pseudo}**")
-                    c2.progress(min(float(nb_actions)/20, 1.0), text=f"Actions: {nb_actions}")
-                    c3.progress(min(float(nb_ventes)/300, 1.0), text=f"Ventes: {int(nb_ventes)}")
+                    # Condition pour ne PAS afficher le patron
+                    if p_id != "Admin":
+                        pseudo = p_info["pseudo"]
+                        user_data = week_data[week_data['Membre'] == pseudo]
+                        nb_actions = len(user_data[user_data['Action'] != "Drogue"])
+                        nb_ventes = abs(user_data[user_data['Action'] == "Drogue"]['Quantite'].sum())
+                        
+                        c1, c2, c3 = st.columns([1, 2, 2])
+                        c1.write(f"**{pseudo}**")
+                        c2.progress(min(float(nb_actions)/20, 1.0), text=f"Actions: {nb_actions}")
+                        c3.progress(min(float(nb_ventes)/300, 1.0), text=f"Ventes: {int(nb_ventes)}")
         except Exception as e:
             st.error(f"Erreur Stats: {e}")
 
@@ -234,12 +236,10 @@ else:
                         st.success("Stock mis à jour !"); time.sleep(1); clear_form_data(); st.rerun()
                     except: st.error("Erreur Sheets.")
 
-        # --- CALCUL DES SOLDES (AVEC DÉPENSES NÉGATIVES) ---
         try:
             df_view = load_data("Tresorerie")
             if not df_view.empty:
                 st.markdown("---")
-                # Calcul intelligent : Recette (+) et Dépense (-)
                 def calc_total(df, etat):
                     sub = df[df['Etat'] == etat]
                     plus = sub[sub['Type'] == 'Recette']['Montant'].sum()
