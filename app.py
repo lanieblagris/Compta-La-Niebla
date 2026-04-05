@@ -111,22 +111,19 @@ else:
             new_row_treso = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Recette", "Etat": "Sale", "Catégorie": action, "Montant": float(butin), "Note": f"Rapport de {st.session_state['user_pseudo']}"}])
             
             try:
-                # Lecture
                 df_rep = conn.read(worksheet="Rapports", ttl=0)
                 df_treso = conn.read(worksheet="Tresorerie", ttl=0)
-                # Mise à jour
                 conn.update(worksheet="Rapports", data=pd.concat([df_rep, new_row_rep], ignore_index=True))
                 conn.update(worksheet="Tresorerie", data=pd.concat([df_treso, new_row_treso], ignore_index=True))
                 
                 st.cache_data.clear()
                 st.success("Transmis avec succès.")
                 time.sleep(1)
-                clear_form_data() # Reset des champs
+                clear_form_data()
                 st.rerun()
             except Exception as e:
                 st.error(f"Erreur lors de la synchronisation : {e}")
 
-        # Les formulaires utilisent maintenant des clés avec "input_" pour le reset
         with tabs[0]:
             with st.form("atm"):
                 b = st.number_input("💵 Butin ($)", min_value=0, key="input_atm")
@@ -152,11 +149,35 @@ else:
                 if st.form_submit_button("VALIDER VENTE"): 
                     handle_submit("Drogue", butin=b, drogue=d_final, quantite=-abs(q))
 
+        # --- SECTION STATISTIQUES (SUIVI DES GARS) ---
+        st.markdown("---")
+        st.write("### 📊 STATISTIQUES DE LA SEMAINE")
+        try:
+            df_stats = conn.read(worksheet="Rapports", ttl=0)
+            if not df_stats.empty:
+                df_stats['Date'] = pd.to_datetime(df_stats['Date'], errors='coerce')
+                now = datetime.datetime.now()
+                start_week = (now - datetime.timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0)
+                week_data = df_stats[df_stats['Date'] >= start_week].copy()
+
+                for p_id, p_info in USERS.items():
+                    pseudo = p_info["pseudo"]
+                    user_data = week_data[week_data['Membre'] == pseudo]
+                    nb_actions = len(user_data[user_data['Action'] != "Drogue"])
+                    nb_ventes = abs(user_data[user_data['Action'] == "Drogue"]['Quantite'].sum())
+                    
+                    c1, c2, c3 = st.columns([1, 2, 2])
+                    c1.write(f"**{pseudo}**")
+                    c2.progress(min(float(nb_actions)/20, 1.0), text=f"Actions: {nb_actions}")
+                    c3.progress(min(float(nb_ventes)/300, 1.0), text=f"Ventes: {int(nb_ventes)}")
+        except Exception as e:
+            st.error(f"Erreur Stats: {e}")
+
     elif choice == "Comptabilité Globale":
         st.markdown('<div class="gta-title">Tresorerie</div>', unsafe_allow_html=True)
         sub_tabs = st.tabs(["📊 Vue d'ensemble", "🧼 Blanchiment", "📦 Gestion des Stocks"])
         
-        with sub_tabs[0]: # VUE ENSEMBLE
+        with sub_tabs[0]:
             with st.form("compta_form"):
                 st.write("#### Opération Manuelle")
                 col1, col2, col3, col4 = st.columns(4)
@@ -178,28 +199,24 @@ else:
                     except Exception as e:
                         st.error(f"Erreur Sheets : {e}")
 
-                          # --- 2. BLANCHIMENT ---
         with sub_tabs[1]:
             st.write("#### 🧼 Blanchisseur")
             with st.form("blanchiment_form"):
                 col_a, col_b = st.columns(2)
-                m_sale = col_a.number_input("Montant sale ($)", min_value=0)
+                m_sale = col_a.number_input("Montant sale ($)", min_value=0, key="input_sale_bl")
                 taux = col_b.slider("Taux (%)", 0, 100, 20)
                 propre = m_sale * (1 - taux/100)
                 if st.form_submit_button("BLANCHIR"):
                     op_s = {"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Dépense", "Etat": "Sale", "Catégorie": "Blanchiment", "Montant": float(m_sale), "Note": "Sortie blanchiment"}
                     op_p = {"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Recette", "Etat": "Propre", "Catégorie": "Blanchiment", "Montant": float(propre), "Note": f"Retour blanchiment (-{taux}%)"}
-                    for _ in range(3):
-                        try:
-                            df_t = conn.read(worksheet="Tresorerie", ttl=0)
-                            conn.update(worksheet="Tresorerie", data=pd.concat([df_t, pd.DataFrame([op_s, op_p])], ignore_index=True))
-                            st.success("Blanchi !"); time.sleep(1); st.rerun()
-                            break
-                        except: time.sleep(1)
+                    try:
+                        df_t = conn.read(worksheet="Tresorerie", ttl=0)
+                        conn.update(worksheet="Tresorerie", data=pd.concat([df_t, pd.DataFrame([op_s, op_p])], ignore_index=True))
+                        st.cache_data.clear()
+                        st.success("Blanchi !"); time.sleep(1); clear_form_data(); st.rerun()
+                    except: st.error("Erreur de connexion.")
 
-
-
-        with sub_tabs[2]: # STOCKS
+        with sub_tabs[2]:
             st.write("#### 📦 État des Stocks")
             with st.form("add_stock"):
                 st.write("➕ AJOUTER UN ARRIVAGE")
@@ -214,25 +231,27 @@ else:
                         df_all_r = conn.read(worksheet="Rapports", ttl=0)
                         conn.update(worksheet="Rapports", data=pd.concat([df_all_r, new_s], ignore_index=True))
                         st.cache_data.clear()
-                        st.success("Stock mis à jour !")
-                        time.sleep(1)
-                        clear_form_data()
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Erreur Sheets : {e}")
+                        st.success("Stock mis à jour !"); time.sleep(1); clear_form_data(); st.rerun()
+                    except: st.error("Erreur Sheets.")
 
-        # Affichage des soldes en bas (Optionnel, reprend ton design de capture)
+        # --- CALCUL DES SOLDES (AVEC DÉPENSES NÉGATIVES) ---
         try:
             df_view = load_data("Tresorerie")
             if not df_view.empty:
                 st.markdown("---")
-                sale = df_view[df_view['Etat'] == 'Sale']['Montant'].sum()
-                propre = df_view[df_view['Etat'] == 'Propre']['Montant'].sum()
+                # Calcul intelligent : Recette (+) et Dépense (-)
+                def calc_total(df, etat):
+                    sub = df[df['Etat'] == etat]
+                    plus = sub[sub['Type'] == 'Recette']['Montant'].sum()
+                    moins = sub[sub['Type'] == 'Dépense']['Montant'].sum()
+                    return plus - moins
+
+                sale = calc_total(df_view, 'Sale')
+                propre = calc_total(df_view, 'Propre')
+                
                 c1, c2, c3 = st.columns(3)
                 c1.metric("SOLDE PROPRE", f"{propre:,.0f} $")
                 c2.metric("SOLDE SALE", f"{sale:,.0f} $")
                 c3.metric("TOTAL GLOBAL", f"{(propre+sale):,.0f} $")
                 st.dataframe(df_view.sort_index(ascending=False).head(10), use_container_width=True)
         except: pass
-
-      
