@@ -41,10 +41,6 @@ st.markdown(f"""
 # --- 3. CONNEXION ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-@st.cache_data(ttl=10)
-def load_data(sheet):
-    return conn.read(worksheet=sheet)
-
 # --- 4. UTILISATEURS ---
 USERS = {
     "Admin": {"password": "0000", "pseudo": "El Patron"},
@@ -66,14 +62,13 @@ def check_login():
         st.session_state['user_role'] = u
         st.session_state['user_pseudo'] = USERS[u]["pseudo"]
 
-# --- 5. LOGIQUE DE RESET DES CHAMPS ---
-def clear_form_data():
-    for key in st.session_state.keys():
-        if key.startswith("input_"):
-            if isinstance(st.session_state[key], (int, float)):
-                st.session_state[key] = 0
-            elif isinstance(st.session_state[key], str):
-                st.session_state[key] = ""
+# --- 5. LOGIQUE DE RESET ---
+# Pour vider les champs proprement sans erreur, on utilise une clé de formulaire
+if "form_key" not in st.session_state:
+    st.session_state.form_key = 0
+
+def reset_form():
+    st.session_state.form_key += 1
 
 # --- 6. AFFICHAGE ---
 if not st.session_state['connected']:
@@ -107,151 +102,43 @@ else:
         DRUG_LIST = ["Marijuana", "Cocaine", "Meth", "Heroine", "Tranq", "Carte Prépayer", "B-magic", "Crack", "Autre"]
 
         def handle_submit(action, butin=0, drogue="N/A", quantite=0):
-            new_row_rep = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Membre": st.session_state['user_pseudo'], "Action": action, "Drogue": drogue, "Quantite": float(quantite), "Butin": float(butin)}])
-            new_row_treso = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Recette", "Etat": "Sale", "Catégorie": action, "Montant": float(butin), "Note": f"Rapport de {st.session_state['user_pseudo']}"}])
-            
             try:
+                new_row_rep = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Membre": st.session_state['user_pseudo'], "Action": action, "Drogue": drogue, "Quantite": float(quantite), "Butin": float(butin)}])
+                new_row_treso = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Recette", "Etat": "Sale", "Catégorie": action, "Montant": float(butin), "Note": f"Rapport de {st.session_state['user_pseudo']}"}])
+                
                 df_rep = conn.read(worksheet="Rapports", ttl=0)
                 df_treso = conn.read(worksheet="Tresorerie", ttl=0)
+                
                 conn.update(worksheet="Rapports", data=pd.concat([df_rep, new_row_rep], ignore_index=True))
                 conn.update(worksheet="Tresorerie", data=pd.concat([df_treso, new_row_treso], ignore_index=True))
                 
-                st.cache_data.clear()
                 st.success("Transmis avec succès.")
                 time.sleep(1)
-                clear_form_data()
+                reset_form()
                 st.rerun()
             except Exception as e:
-                st.error(f"Erreur lors de la synchronisation : {e}")
+                st.error(f"Erreur : {e}")
 
+        # Utilisation de form_key pour réinitialiser tous les champs d'un coup
         with tabs[0]:
-            with st.form("atm"):
-                b = st.number_input("💵 Butin ($)", min_value=0, key="input_atm")
+            with st.form(key=f"atm_{st.session_state.form_key}"):
+                b = st.number_input("💵 Butin ($)", min_value=0)
                 if st.form_submit_button("VALIDER ATM"): handle_submit("ATM", butin=b)
         with tabs[1]:
-            with st.form("sup"):
-                b = st.number_input("💵 Butin ($)", min_value=0, key="input_sup")
+            with st.form(key=f"sup_{st.session_state.form_key}"):
+                b = st.number_input("💵 Butin ($)", min_value=0)
                 if st.form_submit_button("VALIDER SUPERETTE"): handle_submit("Supérette", butin=b)
         with tabs[2]:
-            with st.form("gf"):
-                b = st.number_input("💵 Butin ($)", min_value=0, key="input_gf")
+            with st.form(key=f"gf_{st.session_state.form_key}"):
+                b = st.number_input("💵 Butin ($)", min_value=0)
                 if st.form_submit_button("VALIDER GO FAST"): handle_submit("Go Fast", butin=b)
         with tabs[3]:
-            with st.form("cam"):
+            with st.form(key=f"cam_{st.session_state.form_key}"):
                 if st.form_submit_button("VALIDER CAMBRIOLAGE"): handle_submit("Cambriolage")
         with tabs[4]:
-            with st.form("dr"):
+            with st.form(key=f"dr_{st.session_state.form_key}"):
                 d_select = st.selectbox("🌿 Produit", DRUG_LIST)
                 d_final = d_select
-                if d_select == "Autre": d_final = st.text_input("Nom spécifique", key="input_dr_name")
-                q = st.number_input("📦 Quantité", min_value=0.0, key="input_dr_qty")
-                b = st.number_input("💵 Prix total ($)", min_value=0, key="input_dr_price")
-                if st.form_submit_button("VALIDER VENTE"): 
-                    handle_submit("Drogue", butin=b, drogue=d_final, quantite=-abs(q))
-
-        # --- SECTION STATISTIQUES (SANS LE PATRON) ---
-        st.markdown("---")
-        st.write("### 📊 STATISTIQUES DE LA SEMAINE")
-        try:
-            df_stats = conn.read(worksheet="Rapports", ttl=0)
-            if not df_stats.empty:
-                df_stats['Date'] = pd.to_datetime(df_stats['Date'], errors='coerce')
-                now = datetime.datetime.now()
-                start_week = (now - datetime.timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0)
-                week_data = df_stats[df_stats['Date'] >= start_week].copy()
-
-                for p_id, p_info in USERS.items():
-                    # Condition pour ne PAS afficher le patron
-                    if p_id != "Admin":
-                        pseudo = p_info["pseudo"]
-                        user_data = week_data[week_data['Membre'] == pseudo]
-                        nb_actions = len(user_data[user_data['Action'] != "Drogue"])
-                        nb_ventes = abs(user_data[user_data['Action'] == "Drogue"]['Quantite'].sum())
-                        
-                        c1, c2, c3 = st.columns([1, 2, 2])
-                        c1.write(f"**{pseudo}**")
-                        c2.progress(min(float(nb_actions)/20, 1.0), text=f"Actions: {nb_actions}")
-                        c3.progress(min(float(nb_ventes)/300, 1.0), text=f"Ventes: {int(nb_ventes)}")
-        except Exception as e:
-            st.error(f"Erreur Stats: {e}")
-
-    elif choice == "Comptabilité Globale":
-        st.markdown('<div class="gta-title">Tresorerie</div>', unsafe_allow_html=True)
-        sub_tabs = st.tabs(["📊 Vue d'ensemble", "🧼 Blanchiment", "📦 Gestion des Stocks"])
-        
-        with sub_tabs[0]:
-            with st.form("compta_form"):
-                st.write("#### Opération Manuelle")
-                col1, col2, col3, col4 = st.columns(4)
-                t_type = col1.selectbox("Type", ["Recette", "Dépense"])
-                t_etat = col2.selectbox("Argent", ["Sale", "Propre"])
-                t_cat = col3.text_input("Catégorie", key="input_cat_man")
-                t_montant = col4.number_input("Montant ($)", min_value=0, key="input_amount_man")
-                t_note = st.text_area("Note", key="input_note_man")
-                if st.form_submit_button("Valider"):
-                    new_op = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": t_type, "Etat": t_etat, "Catégorie": t_cat, "Montant": float(t_montant), "Note": t_note}])
-                    try:
-                        df_c = conn.read(worksheet="Tresorerie", ttl=0)
-                        conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_op], ignore_index=True))
-                        st.cache_data.clear()
-                        st.success("Opération enregistrée.")
-                        time.sleep(1)
-                        clear_form_data()
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Erreur Sheets : {e}")
-
-        with sub_tabs[1]:
-            st.write("#### 🧼 Blanchisseur")
-            with st.form("blanchiment_form"):
-                col_a, col_b = st.columns(2)
-                m_sale = col_a.number_input("Montant sale ($)", min_value=0, key="input_sale_bl")
-                taux = col_b.slider("Taux (%)", 0, 100, 20)
-                propre = m_sale * (1 - taux/100)
-                if st.form_submit_button("BLANCHIR"):
-                    op_s = {"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Dépense", "Etat": "Sale", "Catégorie": "Blanchiment", "Montant": float(m_sale), "Note": "Sortie blanchiment"}
-                    op_p = {"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Recette", "Etat": "Propre", "Catégorie": "Blanchiment", "Montant": float(propre), "Note": f"Retour blanchiment (-{taux}%)"}
-                    try:
-                        df_t = conn.read(worksheet="Tresorerie", ttl=0)
-                        conn.update(worksheet="Tresorerie", data=pd.concat([df_t, pd.DataFrame([op_s, op_p])], ignore_index=True))
-                        st.cache_data.clear()
-                        st.success("Blanchi !"); time.sleep(1); clear_form_data(); st.rerun()
-                    except: st.error("Erreur de connexion.")
-
-        with sub_tabs[2]:
-            st.write("#### 📦 État des Stocks")
-            with st.form("add_stock"):
-                st.write("➕ AJOUTER UN ARRIVAGE")
-                cs1, cs2 = st.columns(2)
-                d_n_sel = cs1.selectbox("Produit", ["Marijuana", "Cocaine", "Meth", "Heroine", "Tranq", "Carte Prépayer", "B-magic", "Crack", "Autre"])
-                d_n_fin = d_n_sel
-                if d_n_sel == "Autre": d_n_fin = st.text_input("Nom spécifique", key="input_stock_name")
-                d_qty = cs2.number_input("Quantité", min_value=0.0, key="input_stock_qty")
-                if st.form_submit_button("VALIDER L'ARRIVAGE"):
-                    new_s = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Membre": "LA NIEBLA", "Action": "Drogue", "Drogue": d_n_fin, "Quantite": float(d_qty), "Butin": 0}])
-                    try:
-                        df_all_r = conn.read(worksheet="Rapports", ttl=0)
-                        conn.update(worksheet="Rapports", data=pd.concat([df_all_r, new_s], ignore_index=True))
-                        st.cache_data.clear()
-                        st.success("Stock mis à jour !"); time.sleep(1); clear_form_data(); st.rerun()
-                    except: st.error("Erreur Sheets.")
-
-        try:
-            df_view = load_data("Tresorerie")
-            if not df_view.empty:
-                st.markdown("---")
-                def calc_total(df, etat):
-                    sub = df[df['Etat'] == etat]
-                    plus = sub[sub['Type'] == 'Recette']['Montant'].sum()
-                    moins = sub[sub['Type'] == 'Dépense']['Montant'].sum()
-                    return plus - moins
-
-                sale = calc_total(df_view, 'Sale')
-                propre = calc_total(df_view, 'Propre')
-                
-                c1, c2, c3 = st.columns(3)
-                c1.metric("SOLDE PROPRE", f"{propre:,.0f} $")
-                c2.metric("SOLDE SALE", f"{sale:,.0f} $")
-                c3.metric("TOTAL GLOBAL", f"{(propre+sale):,.0f} $")
-                st.dataframe(df_view.sort_index(ascending=False).head(10), use_container_width=True)
-        except: pass
+                if d_select == "Autre": d_final = st.text_input("Nom spécifique")
+                q = st.number_input("📦 Quantité", min_value=0.0)
+                b
