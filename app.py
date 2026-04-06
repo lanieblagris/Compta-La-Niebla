@@ -7,18 +7,9 @@ import time
 # --- 1. CONFIGURATION ET CONSTANTES GLOBALES ---
 st.set_page_config(page_title="La Niebla - FlashBack FA", page_icon="🥷", layout="wide")
 
-# On définit les listes ici pour qu'elles soient accessibles partout dans le code
 DRUG_LIST = ["Marijuana", "Cocaine", "Meth", "Heroine", "Tranq", "Carte Prépayer", "B-magic", "Crack", "Autre"]
-
-USERS = {
-    "Admin": {"password": "0000", "pseudo": "El Patron"},
-    "Alex": {"password": "Alx220717", "pseudo": "Alex Smith"},
-    "Dany": {"password": "081219", "pseudo": "Dany Smith"},
-    "Emilio": {"password": "azertyuiop123", "pseudo": "Emilio Montoya"},
-    "Aziz": {"password": "asmith", "pseudo": "Aziz Smith"},
-    "Junior": {"password": "Loup1304", "pseudo": "Madra Junior"},
-    "Alain": {"password": "999cww59", "pseudo": "Alain Bourdin"},
-}
+# Liste des rangs disponibles pour la gestion
+RANKS_LIST = ["Líder", "Mano Derecha", "Soldado", "Recrue"]
 
 # --- 2. STYLE CSS & BACKGROUND ---
 VIDEO_URL = "https://assets.mixkit.co/videos/preview/mixkit-mysterious-pale-fog-moving-slowly-over-the-ground-44130-large.mp4"
@@ -33,11 +24,15 @@ st.markdown(f"""
         text-align: center; text-shadow: 5px 5px 15px #000, 0 0 25px #555;
         margin-top: -60px; margin-bottom: 0px; letter-spacing: 3px;
     }}
-    .lore-quote {{
-        font-family: 'Courier New', monospace; color: #888; font-size: 18px;
-        text-align: center; letter-spacing: 2px; text-transform: uppercase;
-        margin-bottom: 30px; opacity: 0.8; font-style: italic;
+    .rank-card {{
+        background: rgba(255, 255, 255, 0.05);
+        border-left: 5px solid #555;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-radius: 5px;
     }}
+    .rank-header {{ color: #888; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; }}
+    .member-name {{ font-size: 20px; color: white; font-family: 'Courier New', monospace; }}
     #bgVideo {{
         position: fixed; right: 0; bottom: 0; min-width: 100%; min-height: 100%;
         z-index: -1000; filter: brightness(0.3); object-fit: cover;
@@ -45,14 +40,15 @@ st.markdown(f"""
     .stForm {{ background-color: rgba(10, 10, 10, 0.85) !important; border: 1px solid #444 !important; border-radius: 10px; }}
     h1, h2, h3, h4, p, label, .stMarkdown, [data-testid="stWidgetLabel"] {{ color: white !important; font-family: 'Courier New', monospace; }}
     [data-testid="stSidebar"] {{ background-color: rgba(0, 0, 0, 0.9) !important; }}
-    [data-testid="stMetricValue"] {{ color: white !important; }}
-    [data-testid="stMetricLabel"] {{ color: #bbb !important; }}
     </style>
     <video autoplay loop muted playsinline id="bgVideo"><source src="{VIDEO_URL}" type="video/mp4"></video>
     """, unsafe_allow_html=True)
 
-# --- 3. CONNEXION ET SESSIONS ---
+# --- 3. CONNEXION ET CHARGEMENT DES MEMBRES ---
 conn = st.connection("gsheets", type=GSheetsConnection)
+
+def get_members_df():
+    return conn.read(worksheet="Membres", ttl=0)
 
 if 'connected' not in st.session_state:
     st.session_state['connected'] = False
@@ -62,19 +58,23 @@ if "form_key" not in st.session_state:
 def reset_form():
     st.session_state.form_key += 1
 
+# Chargement initial des membres pour l'auth
+df_members = get_members_df()
+
 def check_login():
     u = st.session_state.get("user_login")
     p = st.session_state.get("password_login")
-    if u in USERS and USERS[u]["password"] == p:
+    user_row = df_members[(df_members['Login'] == u) & (df_members['Password'].astype(str) == str(p))]
+    if not user_row.empty:
         st.session_state['connected'] = True
-        st.session_state['user_role'] = u
-        st.session_state['user_pseudo'] = USERS[u]["pseudo"]
+        st.session_state['user_login_id'] = u
+        st.session_state['user_pseudo'] = user_row.iloc[0]['Pseudo']
+        st.session_state['user_role'] = user_row.iloc[0]['Role']
 
 # --- 4. AFFICHAGE ---
 if not st.session_state['connected']:
     st.write("<br><br><br>", unsafe_allow_html=True)
     st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
-    st.markdown('<div class="lore-quote">"Le Gris n\'est pas qu\'une couleur, c\'est une attitude."</div>', unsafe_allow_html=True)
     _, mid, _ = st.columns([1, 1.2, 1])
     with mid:
         with st.form("login_form"):
@@ -86,14 +86,56 @@ if not st.session_state['connected']:
 else:
     with st.sidebar:
         st.write(f"### 🥷 {st.session_state['user_pseudo']}")
-        menu = ["Tableau de bord"]
-        if st.session_state['user_role'] == "Admin": menu.append("Comptabilité Globale")
+        # On récupère le rang à jour
+        current_rank = df_members[df_members['Login'] == st.session_state['user_login_id']]['Role'].values[0]
+        st.write(f"**Rang :** {current_rank}")
+        
+        menu = ["Tableau de bord", "Hiérarchie Clan"]
+        if st.session_state['user_role'] == "Admin": 
+            menu.append("Gestion des Membres")
+            menu.append("Comptabilité Globale")
+            
         choice = st.radio("Navigation", menu)
         if st.button("Déconnexion"):
             st.session_state.clear()
             st.rerun()
 
-    if choice == "Tableau de bord":
+    # --- ONGLET GESTION DES MEMBRES (ADMIN ONLY) ---
+    if choice == "Gestion des Membres":
+        st.markdown('<div class="gta-title">Admin</div>', unsafe_allow_html=True)
+        st.write("### 🎖️ Gestion des Rangs")
+        
+        # On ne modifie pas le Patron lui-même pour éviter les erreurs d'accès
+        members_to_edit = df_members[df_members['Role'] != 'Admin']
+        
+        for index, row in members_to_edit.iterrows():
+            with st.expander(f"👤 {row['Pseudo']} (Actuel: {row['Role']})"):
+                new_rank = st.selectbox(f"Nouveau rang pour {row['Pseudo']}", RANKS_LIST, 
+                                        index=RANKS_LIST.index(row['Role']) if row['Role'] in RANKS_LIST else 0, 
+                                        key=f"rank_{row['Login']}")
+                if st.form_submit_button(f"Mettre à jour {row['Pseudo']}", key=f"btn_{row['Login']}"):
+                    df_members.at[index, 'Role'] = new_rank
+                    conn.update(worksheet="Membres", data=df_members)
+                    st.success(f"Rang mis à jour !")
+                    time.sleep(1)
+                    st.rerun()
+
+    # --- ONGLET HIÉRARCHIE ---
+    elif choice == "Hiérarchie Clan":
+        st.markdown('<div class="gta-title">Organigrama</div>', unsafe_allow_html=True)
+        # Affichage par ordre de RANKS_LIST
+        for rank in RANKS_LIST:
+            m_list = df_members[df_members['Role'] == rank]['Pseudo'].tolist()
+            if m_list:
+                st.markdown(f"""
+                <div class="rank-card">
+                    <div class="rank-header">{rank}</div>
+                    <div class="member-name">{' • '.join(m_list)}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+    # --- TABLEAU DE BORD ---
+    elif choice == "Tableau de bord":
         st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
         LOGO_URL = "https://raw.githubusercontent.com/lanieblagris/Compta-La-Niebla/main/logo.png?v=4"
         st.markdown(f'<div style="text-align:center;"><img src="{LOGO_URL}" style="width:100%; max-height:200px; object-fit:cover; border-radius:10px; margin-bottom:20px;"></div>', unsafe_allow_html=True)
@@ -112,6 +154,7 @@ else:
                 time.sleep(1); reset_form(); st.rerun()
             except Exception as e: st.error(f"Erreur : {e}")
 
+        # Formulaires de saisie
         with tabs[0]:
             with st.form(key=f"atm_{st.session_state.form_key}"):
                 b = st.number_input("💵 Butin ($)", min_value=0)
@@ -130,13 +173,11 @@ else:
         with tabs[4]:
             with st.form(key=f"dr_{st.session_state.form_key}"):
                 d_select = st.selectbox("🌿 Produit", DRUG_LIST)
-                d_final = d_select
-                if d_select == "Autre": d_final = st.text_input("Nom spécifique")
                 q = st.number_input("📦 Quantité", min_value=0.0)
                 b = st.number_input("💵 Prix total ($)", min_value=0)
-                if st.form_submit_button("VALIDER VENTE"): handle_submit("Drogue", butin=b, drogue=d_final, quantite=-abs(q))
+                if st.form_submit_button("VALIDER VENTE"): handle_submit("Drogue", butin=b, drogue=d_select, quantite=-abs(q))
 
-        # --- STATISTIQUES (SANS LE PATRON) ---
+        # --- STATISTIQUES (MASQUER LE PATRON) ---
         st.markdown("---")
         st.write("### 📊 STATISTIQUES DE LA SEMAINE")
         try:
@@ -145,9 +186,11 @@ else:
                 df_stats['Date'] = pd.to_datetime(df_stats['Date'], errors='coerce')
                 start_week = (datetime.datetime.now() - datetime.timedelta(days=datetime.datetime.now().weekday())).replace(hour=0, minute=0, second=0)
                 week_data = df_stats[df_stats['Date'] >= start_week].copy()
-                for p_id, p_info in USERS.items():
-                    if p_id != "Admin": # Cache le patron
-                        pseudo = p_info["pseudo"]
+                
+                # On utilise les pseudos de la feuille Membres
+                for _, m_row in df_members.iterrows():
+                    if m_row['Role'] != "Admin":
+                        pseudo = m_row['Pseudo']
                         user_data = week_data[week_data['Membre'] == pseudo]
                         nb_actions = len(user_data[user_data['Action'] != "Drogue"])
                         nb_ventes = abs(user_data[user_data['Action'] == "Drogue"]['Quantite'].sum())
@@ -157,6 +200,7 @@ else:
                         c3.progress(min(float(nb_ventes)/300, 1.0), text=f"Ventes: {int(nb_ventes)}")
         except: pass
 
+    # --- COMPTABILITÉ GLOBALE ---
     elif choice == "Comptabilité Globale":
         st.markdown('<div class="gta-title">Tresorerie</div>', unsafe_allow_html=True)
         sub_tabs = st.tabs(["📊 Vue d'ensemble", "🧼 Blanchiment", "📦 Gestion des Stocks"])
@@ -187,15 +231,16 @@ else:
                 if st.form_submit_button("BLANCHIR"):
                     try:
                         propre = m_sale * (1 - taux/100)
-                        op_s = {"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Dépense", "Etat": "Sale", "Catégorie": "Blanchiment", "Montant": float(m_sale), "Note": "Sortie blanchiment"}
-                        op_p = {"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Recette", "Etat": "Propre", "Catégorie": "Blanchiment", "Montant": float(propre), "Note": f"Retour (-{taux}%)"}
                         df_t = conn.read(worksheet="Tresorerie", ttl=0)
-                        conn.update(worksheet="Tresorerie", data=pd.concat([df_t, pd.DataFrame([op_s, op_p])], ignore_index=True))
+                        ops = pd.DataFrame([
+                            {"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Dépense", "Etat": "Sale", "Catégorie": "Blanchiment", "Montant": float(m_sale), "Note": "Sortie blanchiment"},
+                            {"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Recette", "Etat": "Propre", "Catégorie": "Blanchiment", "Montant": float(propre), "Note": f"Retour (-{taux}%)"}
+                        ])
+                        conn.update(worksheet="Tresorerie", data=pd.concat([df_t, ops], ignore_index=True))
                         st.success("Blanchi !"); time.sleep(1); reset_form(); st.rerun()
                     except: st.error("Erreur.")
 
         with sub_tabs[2]:
-            # CORRECTION : Ajout du bouton submit manquant et utilisation de la liste globale
             with st.form(key=f"stk_{st.session_state.form_key}"):
                 st.write("#### 📦 Gestion des Stocks")
                 cs1, cs2 = st.columns(2)
@@ -209,7 +254,6 @@ else:
                         st.success("Stock mis à jour !"); time.sleep(1); reset_form(); st.rerun()
                     except: st.error("Erreur Sheets.")
 
-        # --- AFFICHAGE FINANCIER ---
         try:
             df_view = conn.read(worksheet="Tresorerie", ttl=0)
             if not df_view.empty:
