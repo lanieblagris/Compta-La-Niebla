@@ -201,3 +201,8 @@ else:
             m_list = df_members[df_members['Role'] == r]['Pseudo'].tolist()
             if m_list:
                 st.markdown(f'<div class="rank-card"><div class="rank-header">{r}</div><div style="font-size:22px;">{" • ".join(m_list)}</div></div>', unsafe_allow_html=True)
+
+                # AJOUTE ÇA TEMPORAIREMENT POUR TESTER :
+df_members = get_members_df()
+st.write("DEBUG : Voici ce que l'IA lit dans le Sheets :")
+st.dataframe(df_members)
