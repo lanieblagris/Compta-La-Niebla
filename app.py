@@ -37,15 +37,12 @@ st.markdown(f"""
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def get_members_df():
-    return conn.read(worksheet="Membres", ttl=0)
+    # Force la lecture en string pour éviter les erreurs de comparaison sur les logins/passwords
+    df = conn.read(worksheet="Membres", ttl=0)
+    return df.astype(str)
 
 if 'connected' not in st.session_state:
     st.session_state['connected'] = False
-if "form_key" not in st.session_state:
-    st.session_state.form_key = 0
-
-def reset_form():
-    st.session_state.form_key += 1
 
 # --- 4. AUTHENTIFICATION ---
 df_members = get_members_df()
@@ -53,13 +50,17 @@ df_members = get_members_df()
 def check_login():
     u = st.session_state.get("user_login")
     p = st.session_state.get("password_login")
-    # On compare en texte brut pour éviter les soucis de format
-    user_match = df_members[(df_members['Login'].astype(str) == str(u)) & (df_members['Password'].astype(str) == str(p))]
+    
+    # Recherche du membre
+    user_match = df_members[(df_members['Login'] == str(u)) & (df_members['Password'] == str(p))]
+    
     if not user_match.empty:
         st.session_state['connected'] = True
         st.session_state['user_login_id'] = str(u)
         st.session_state['user_pseudo'] = user_match.iloc[0]['Pseudo']
         st.session_state['user_role'] = user_match.iloc[0]['Role']
+    else:
+        st.error("Accès refusé.")
 
 # --- 5. INTERFACE ---
 if not st.session_state['connected']:
@@ -73,16 +74,11 @@ if not st.session_state['connected']:
             if st.form_submit_button("S'INFILTRER"):
                 check_login()
                 if st.session_state['connected']: st.rerun()
-                else: st.error("Accès refusé.")
 else:
+    # --- Barre latérale ---
     with st.sidebar:
         st.write(f"### 🥷 {st.session_state['user_pseudo']}")
-        # Récupération du rang en direct
-        try:
-            current_r = df_members[df_members['Login'].astype(str) == st.session_state['user_login_id']]['Role'].values[0]
-            st.write(f"**Rang :** {current_r}")
-        except:
-            st.write(f"**Rang :** {st.session_state['user_role']}")
+        st.write(f"**Rang :** {st.session_state['user_role']}")
         
         menu = ["Tableau de bord", "Hiérarchie Clan"]
         if st.session_state['user_role'] == "Admin": 
@@ -94,111 +90,114 @@ else:
             st.session_state.clear()
             st.rerun()
 
-    # --- GESTION DES MEMBRES (ADMIN) ---
-    if choice == "Gestion des Membres":
-        st.markdown('<div class="gta-title">Admin</div>', unsafe_allow_html=True)
-        st.write("### 🎖️ Modifier les Rangs")
-        
-        to_edit = df_members[df_members['Role'] != 'Admin'].copy()
-        
-        for idx, row in to_edit.iterrows():
-            with st.expander(f"👤 {row['Pseudo']} (Actuel: {row['Role']})"):
-                with st.form(key=f"f_edit_{row['Login']}"):
-                    new_rank = st.selectbox("Nouveau Rang", RANKS_LIST, 
-                                          index=RANKS_LIST.index(row['Role']) if row['Role'] in RANKS_LIST else 0)
-                    if st.form_submit_button("VALIDER LE CHANGEMENT"):
-                        df_members.loc[df_members['Login'] == row['Login'], 'Role'] = new_rank
-                        conn.update(worksheet="Membres", data=df_members)
-                        st.success("Rang mis à jour dans le Sheets !")
-                        time.sleep(1)
-                        st.rerun()
+    # --- LOGIQUE DE FORMULAIRE (Unique Key pour éviter Erreur de Synchronisation) ---
+    # Cette partie résout l'erreur visible sur l'image_112d2b.jpg
+    if "submit_id" not in st.session_state:
+        st.session_state.submit_id = 0
 
-    # --- HIÉRARCHIE ---
-    elif choice == "Hiérarchie Clan":
-        st.markdown('<div class="gta-title">Organigrama</div>', unsafe_allow_html=True)
-        for r in RANKS_LIST:
-            names = df_members[df_members['Role'] == r]['Pseudo'].tolist()
-            if names:
-                st.markdown(f'<div class="rank-card"><div class="rank-header">{r}</div><div style="color:white; font-size:20px;">{" • ".join(names)}</div></div>', unsafe_allow_html=True)
+    def refresh_app():
+        st.session_state.submit_id += 1
+        st.rerun()
 
     # --- TABLEAU DE BORD ---
-    elif choice == "Tableau de bord":
+    if choice == "Tableau de bord":
         st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
         LOGO_URL = "https://raw.githubusercontent.com/lanieblagris/Compta-La-Niebla/main/logo.png?v=4"
         st.markdown(f'<div style="text-align:center;"><img src="{LOGO_URL}" style="width:100%; max-height:200px; object-fit:cover; border-radius:10px; margin-bottom:20px;"></div>', unsafe_allow_html=True)
         
         tabs = st.tabs(["💰 ATM", "🛒 Supérette", "🏎️ Go Fast", "🏠 Cambriolage", "🌿 Drogue"])
 
-        def handle_submit(action, butin=0, drogue="N/A", quantite=0):
+        def handle_action(action, butin=0, drogue="N/A", qty=0):
             try:
                 ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-                new_rep = pd.DataFrame([{"Date": ts, "Membre": st.session_state['user_pseudo'], "Action": action, "Drogue": drogue, "Quantite": float(quantite), "Butin": float(butin)}])
-                new_tres = pd.DataFrame([{"Date": ts, "Type": "Recette", "Etat": "Sale", "Catégorie": action, "Montant": float(butin), "Note": f"Rapport de {st.session_state['user_pseudo']}"}])
-                
+                # Mise à jour Rapports
                 df_r = conn.read(worksheet="Rapports", ttl=0)
-                df_t = conn.read(worksheet="Tresorerie", ttl=0)
-                
+                new_rep = pd.DataFrame([{"Date": ts, "Membre": st.session_state['user_pseudo'], "Action": action, "Drogue": drogue, "Quantite": float(qty), "Butin": float(butin)}])
                 conn.update(worksheet="Rapports", data=pd.concat([df_r, new_rep], ignore_index=True))
+                
+                # Mise à jour Trésorerie (Argent Sale par défaut)
+                df_t = conn.read(worksheet="Tresorerie", ttl=0)
+                new_tres = pd.DataFrame([{"Date": ts, "Type": "Recette", "Etat": "Sale", "Catégorie": action, "Montant": float(butin), "Note": f"Rapport de {st.session_state['user_pseudo']}"}])
                 conn.update(worksheet="Tresorerie", data=pd.concat([df_t, new_tres], ignore_index=True))
                 
                 st.success("Transmis avec succès.")
-                time.sleep(1); reset_form(); st.rerun()
-            except Exception as e: st.error(f"Erreur Sheets : {e}")
+                time.sleep(1)
+                refresh_app()
+            except Exception as e:
+                st.error(f"Erreur Sheets : {e}")
 
-        with tabs[0]:
-            with st.form(key=f"atm_{st.session_state.form_key}"):
+        with tabs[0]: # ATM
+            with st.form(key=f"atm_{st.session_state.submit_id}"):
                 b = st.number_input("💵 Butin ($)", min_value=0)
-                if st.form_submit_button("VALIDER ATM"): handle_submit("ATM", butin=b)
-        with tabs[4]:
-            with st.form(key=f"drg_{st.session_state.form_key}"):
+                if st.form_submit_button("VALIDER ATM"):
+                    handle_action("ATM", butin=b)
+
+        with tabs[4]: # Drogue
+            with st.form(key=f"drg_{st.session_state.submit_id}"):
                 d = st.selectbox("🌿 Produit", DRUG_LIST)
-                q = st.number_input("📦 Quantité", min_value=0.0)
+                q = st.number_input("📦 Quantité vendue", min_value=0.0)
                 b = st.number_input("💵 Prix total ($)", min_value=0)
-                if st.form_submit_button("VALIDER VENTE"): handle_submit("Drogue", butin=b, drogue=d, quantite=-abs(q))
+                if st.form_submit_button("VALIDER VENTE"):
+                    handle_action("Drogue", butin=b, drogue=d, qty=-abs(q))
 
     # --- COMPTABILITÉ GLOBALE ---
     elif choice == "Comptabilité Globale":
         st.markdown('<div class="gta-title">Tresorerie</div>', unsafe_allow_html=True)
-        sub = st.tabs(["📊 Vue d'ensemble", "🧼 Blanchiment", "📦 Gestion des Stocks"])
+        sub_tabs = st.tabs(["📊 Vue d'ensemble", "🧼 Blanchiment", "📦 Gestion des Stocks"])
         
-        with sub[0]: # Vue d'ensemble
-            with st.form(key=f"man_{st.session_state.form_key}"):
-                c1, c2, c3, c4 = st.columns(4)
-                t_type = c1.selectbox("Type", ["Recette", "Dépense"])
-                t_etat = c2.selectbox("Argent", ["Sale", "Propre"])
-                t_cat = c3.text_input("Catégorie")
-                t_mon = c4.number_input("Montant ($)", min_value=0)
+        with sub_tabs[0]: # Manuel
+            with st.form(key=f"treso_{st.session_state.submit_id}"):
+                col1, col2, col3, col4 = st.columns(4)
+                t_type = col1.selectbox("Type", ["Recette", "Dépense"])
+                t_etat = col2.selectbox("Argent", ["Sale", "Propre"])
+                t_cat = col3.text_input("Catégorie")
+                t_mon = col4.number_input("Montant ($)", min_value=0)
                 t_not = st.text_area("Note")
-                if st.form_submit_button("Valider"):
+                if st.form_submit_button("Valider l'opération"):
+                    df_t = conn.read(worksheet="Tresorerie", ttl=0)
                     new_op = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": t_type, "Etat": t_etat, "Catégorie": t_cat, "Montant": float(t_mon), "Note": t_not}])
-                    df_c = conn.read(worksheet="Tresorerie", ttl=0)
-                    conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_op], ignore_index=True))
-                    st.success("Enregistré."); time.sleep(1); reset_form(); st.rerun()
+                    conn.update(worksheet="Tresorerie", data=pd.concat([df_t, new_op], ignore_index=True))
+                    st.success("Opération enregistrée.")
+                    time.sleep(1)
+                    refresh_app()
 
-        with sub[2]: # Gestion des Stocks (Correction ici)
-            with st.form(key=f"stk_{st.session_state.form_key}"):
-                st.write("#### 📦 Ajouter du Stock")
-                col1, col2 = st.columns(2)
-                d_name = col1.selectbox("Produit", DRUG_LIST)
-                d_qty = col2.number_input("Quantité reçue", min_value=0.0)
-                if st.form_submit_button("VALIDER L'ARRIVAGE"):
-                    new_s = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Membre": "LA NIEBLA", "Action": "Drogue", "Drogue": d_name, "Quantite": float(d_qty), "Butin": 0}])
-                    df_all = conn.read(worksheet="Rapports", ttl=0)
-                    conn.update(worksheet="Rapports", data=pd.concat([df_all, new_s], ignore_index=True))
-                    st.success("Stock mis à jour !"); time.sleep(1); reset_form(); st.rerun()
+        with sub_tabs[2]: # Stocks (Résout SyntaxError et NameError image_b53467.png & image_1134af.png)
+            with st.form(key=f"stock_{st.session_state.submit_id}"):
+                st.write("#### 📦 Ajouter du Stock (Arrivage)")
+                s_col1, s_col2 = st.columns(2)
+                d_name = s_col1.selectbox("Produit", DRUG_LIST)
+                d_qty = s_col2.number_input("Quantité reçue", min_value=0.0)
+                if st.form_submit_button("ENREGISTRER L'ARRIVAGE"):
+                    df_r = conn.read(worksheet="Rapports", ttl=0)
+                    new_s = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Membre": "LA NIEBLA", "Action": "Arrivage Stock", "Drogue": d_name, "Quantite": float(d_qty), "Butin": 0}])
+                    conn.update(worksheet="Rapports", data=pd.concat([df_r, new_s], ignore_index=True))
+                    st.success("Stock mis à jour !")
+                    time.sleep(1)
+                    refresh_app()
 
-        # Recap financier
+        # Recapitulatif visuel
         try:
             df_v = conn.read(worksheet="Tresorerie", ttl=0)
             if not df_v.empty:
                 st.markdown("---")
-                def calc(df, et):
-                    sub_df = df[df['Etat'] == et]
-                    return sub_df[sub_df['Type'] == 'Recette']['Montant'].sum() - sub_df[sub_df['Type'] == 'Dépense']['Montant'].sum()
-                s_s, s_p = calc(df_v, 'Sale'), calc(df_v, 'Propre')
-                m1, m2, m3 = st.columns(3)
-                m1.metric("PROPRE", f"{s_p:,.0f} $")
-                m2.metric("SALE", f"{s_s:,.0f} $")
-                m3.metric("TOTAL", f"{(s_p+s_s):,.0f} $")
-                st.dataframe(df_v.sort_index(ascending=False).head(15), use_container_width=True)
-        except: pass
+                def sum_m(df, etat, t_type):
+                    return df[(df['Etat'] == etat) & (df['Type'] == t_type)]['Montant'].astype(float).sum()
+                
+                solde_sale = sum_m(df_v, 'Sale', 'Recette') - sum_m(df_v, 'Sale', 'Dépense')
+                solde_propre = sum_m(df_v, 'Propre', 'Recette') - sum_m(df_v, 'Propre', 'Dépense')
+                
+                c1, c2, c3 = st.columns(3)
+                c1.metric("SOLDE PROPRE", f"{solde_propre:,.0f} $")
+                c2.metric("SOLDE SALE", f"{solde_sale:,.0f} $")
+                c3.metric("TOTAL GLOBAL", f"{(solde_propre + solde_sale):,.0f} $")
+                st.dataframe(df_v.sort_index(ascending=False), use_container_width=True)
+        except:
+            pass
+
+    # --- HIERARCHIE ---
+    elif choice == "Hiérarchie Clan":
+        st.markdown('<div class="gta-title">Organigrama</div>', unsafe_allow_html=True)
+        for r in RANKS_LIST:
+            m_list = df_members[df_members['Role'] == r]['Pseudo'].tolist()
+            if m_list:
+                st.markdown(f'<div class="rank-card"><div class="rank-header">{r}</div><div style="font-size:22px;">{" • ".join(m_list)}</div></div>', unsafe_allow_html=True)
