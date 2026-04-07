@@ -136,6 +136,23 @@ else:
                 b = st.number_input("💵 Prix total ($)", min_value=0)
                 if st.form_submit_button("VALIDER VENTE"): handle_submit("Drogue", butin=b, drogue=d_final, quantite=-abs(q))
 
+                # --- FONCTION DE LOG (INVISIBLE) ---
+def log_action(action, details="", montant=0):
+    """Enregistre l'action dans la feuille Rapports sans l'afficher à l'écran"""
+    try:
+        ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+        df_r = conn.read(worksheet="Rapports", ttl=0)
+        new_log = pd.DataFrame([{
+            "Date": ts,
+            "Membre": st.session_state.get('pseudo', 'Système'),
+            "Action": action,
+            "Détails": details,
+            "Montant": float(montant)
+        }])
+        conn.update(worksheet="Rapports", data=pd.concat([df_r, new_log], ignore_index=True))
+    except:
+        pass # Reste silencieux en cas d'erreur réseau
+
         # --- STATISTIQUES (SANS LE PATRON) ---
         st.markdown("---")
         st.write("### 📊 STATISTIQUES DE LA SEMAINE")
