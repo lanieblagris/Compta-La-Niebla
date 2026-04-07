@@ -7,7 +7,6 @@ import time
 # --- 1. CONFIGURATION ET CONSTANTES GLOBALES ---
 st.set_page_config(page_title="La Niebla - FlashBack FA", page_icon="🥷", layout="wide")
 
-# On définit les listes ici pour qu'elles soient accessibles partout dans le code
 DRUG_LIST = ["Marijuana", "Cocaine", "Meth", "Heroine", "Tranq", "Carte Prépayer", "B-magic", "Crack", "Autre"]
 
 USERS = {
@@ -51,8 +50,26 @@ st.markdown(f"""
     <video autoplay loop muted playsinline id="bgVideo"><source src="{VIDEO_URL}" type="video/mp4"></video>
     """, unsafe_allow_html=True)
 
-# --- 3. CONNEXION ET SESSIONS ---
+# --- 3. CONNEXION ET LOGS INVISIBLES ---
 conn = st.connection("gsheets", type=GSheetsConnection)
+
+def log_invisible(action, details=""):
+    """Enregistre une action système dans les Rapports sans notification visuelle"""
+    try:
+        ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+        df_r = conn.read(worksheet="Rapports", ttl=0)
+        new_log = pd.DataFrame([{
+            "Date": ts,
+            "Membre": st.session_state.get('user_pseudo', 'Système'),
+            "Action": f"[LOG] {action}",
+            "Drogue": "N/A",
+            "Quantite": 0,
+            "Butin": 0,
+            "Note": details
+        }])
+        conn.update(worksheet="Rapports", data=pd.concat([df_r, new_log], ignore_index=True))
+    except:
+        pass
 
 if 'connected' not in st.session_state:
     st.session_state['connected'] = False
@@ -69,8 +86,11 @@ def check_login():
         st.session_state['connected'] = True
         st.session_state['user_role'] = u
         st.session_state['user_pseudo'] = USERS[u]["pseudo"]
+        log_invisible("Connexion", f"Login réussi pour {u}")
+    else:
+        st.error("Accès refusé.")
 
-# --- 4. AFFICHAGE ---
+# --- 4. AFFICHAGE ET NAVIGATION ---
 if not st.session_state['connected']:
     st.write("<br><br><br>", unsafe_allow_html=True)
     st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
@@ -90,9 +110,11 @@ else:
         if st.session_state['user_role'] == "Admin": menu.append("Comptabilité Globale")
         choice = st.radio("Navigation", menu)
         if st.button("Déconnexion"):
+            log_invisible("Déconnexion", "Session fermée")
             st.session_state.clear()
             st.rerun()
 
+    # --- PAGE : TABLEAU DE BORD ---
     if choice == "Tableau de bord":
         st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
         LOGO_URL = "https://raw.githubusercontent.com/lanieblagris/Compta-La-Niebla/main/logo.png?v=4"
@@ -102,12 +124,16 @@ else:
 
         def handle_submit(action, butin=0, drogue="N/A", quantite=0):
             try:
-                new_row_rep = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Membre": st.session_state['user_pseudo'], "Action": action, "Drogue": drogue, "Quantite": float(quantite), "Butin": float(butin)}])
-                new_row_treso = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Recette", "Etat": "Sale", "Catégorie": action, "Montant": float(butin), "Note": f"Rapport de {st.session_state['user_pseudo']}"}])
+                now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+                new_row_rep = pd.DataFrame([{"Date": now, "Membre": st.session_state['user_pseudo'], "Action": action, "Drogue": drogue, "Quantite": float(quantite), "Butin": float(butin)}])
+                new_row_treso = pd.DataFrame([{"Date": now, "Type": "Recette", "Etat": "Sale", "Catégorie": action, "Montant": float(butin), "Note": f"Rapport de {st.session_state['user_pseudo']}"}])
+                
                 df_rep = conn.read(worksheet="Rapports", ttl=0)
                 df_treso = conn.read(worksheet="Tresorerie", ttl=0)
+                
                 conn.update(worksheet="Rapports", data=pd.concat([df_rep, new_row_rep], ignore_index=True))
                 conn.update(worksheet="Tresorerie", data=pd.concat([df_treso, new_row_treso], ignore_index=True))
+                
                 st.success("Transmis avec succès.")
                 time.sleep(1); reset_form(); st.rerun()
             except Exception as e: st.error(f"Erreur : {e}")
@@ -135,25 +161,7 @@ else:
                 q = st.number_input("📦 Quantité", min_value=0.0)
                 b = st.number_input("💵 Prix total ($)", min_value=0)
                 if st.form_submit_button("VALIDER VENTE"): handle_submit("Drogue", butin=b, drogue=d_final, quantite=-abs(q))
-
-                # --- FONCTION DE LOG (INVISIBLE) ---
-def log_action(action, details="", montant=0):
-    """Enregistre l'action dans la feuille Rapports sans l'afficher à l'écran"""
-    try:
-        ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-        df_r = conn.read(worksheet="Rapports", ttl=0)
-        new_log = pd.DataFrame([{
-            "Date": ts,
-            "Membre": st.session_state.get('pseudo', 'Système'),
-            "Action": action,
-            "Détails": details,
-            "Montant": float(montant)
-        }])
-        conn.update(worksheet="Rapports", data=pd.concat([df_r, new_log], ignore_index=True))
-    except:
-        pass # Reste silencieux en cas d'erreur réseau
-
-        # --- STATISTIQUES (SANS LE PATRON) ---
+               
         st.markdown("---")
         st.write("### 📊 STATISTIQUES DE LA SEMAINE")
         try:
@@ -163,7 +171,7 @@ def log_action(action, details="", montant=0):
                 start_week = (datetime.datetime.now() - datetime.timedelta(days=datetime.datetime.now().weekday())).replace(hour=0, minute=0, second=0)
                 week_data = df_stats[df_stats['Date'] >= start_week].copy()
                 for p_id, p_info in USERS.items():
-                    if p_id != "Admin": # Cache le patron
+                    if p_id != "Admin":
                         pseudo = p_info["pseudo"]
                         user_data = week_data[week_data['Membre'] == pseudo]
                         nb_actions = len(user_data[user_data['Action'] != "Drogue"])
@@ -174,6 +182,7 @@ def log_action(action, details="", montant=0):
                         c3.progress(min(float(nb_ventes)/300, 1.0), text=f"Ventes: {int(nb_ventes)}")
         except: pass
 
+    # --- PAGE : COMPTABILITÉ (ADMIN) ---
     elif choice == "Comptabilité Globale":
         st.markdown('<div class="gta-title">Tresorerie</div>', unsafe_allow_html=True)
         sub_tabs = st.tabs(["📊 Vue d'ensemble", "🧼 Blanchiment", "📦 Gestion des Stocks"])
@@ -192,6 +201,7 @@ def log_action(action, details="", montant=0):
                         new_op = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": t_type, "Etat": t_etat, "Catégorie": t_cat, "Montant": float(t_montant), "Note": t_note}])
                         df_c = conn.read(worksheet="Tresorerie", ttl=0)
                         conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_op], ignore_index=True))
+                        log_invisible("Compta", f"Opération manuelle: {t_cat} ({t_montant}$)")
                         st.success("Enregistré."); time.sleep(1); reset_form(); st.rerun()
                     except: st.error("Erreur Sheets.")
 
@@ -204,40 +214,5 @@ def log_action(action, details="", montant=0):
                 if st.form_submit_button("BLANCHIR"):
                     try:
                         propre = m_sale * (1 - taux/100)
-                        op_s = {"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Dépense", "Etat": "Sale", "Catégorie": "Blanchiment", "Montant": float(m_sale), "Note": "Sortie blanchiment"}
-                        op_p = {"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": "Recette", "Etat": "Propre", "Catégorie": "Blanchiment", "Montant": float(propre), "Note": f"Retour (-{taux}%)"}
-                        df_t = conn.read(worksheet="Tresorerie", ttl=0)
-                        conn.update(worksheet="Tresorerie", data=pd.concat([df_t, pd.DataFrame([op_s, op_p])], ignore_index=True))
-                        st.success("Blanchi !"); time.sleep(1); reset_form(); st.rerun()
-                    except: st.error("Erreur.")
-
-        with sub_tabs[2]:
-            # CORRECTION : Ajout du bouton submit manquant et utilisation de la liste globale
-            with st.form(key=f"stk_{st.session_state.form_key}"):
-                st.write("#### 📦 Gestion des Stocks")
-                cs1, cs2 = st.columns(2)
-                d_name = cs1.selectbox("Produit", DRUG_LIST)
-                d_qty = cs2.number_input("Quantité", min_value=0.0)
-                if st.form_submit_button("VALIDER L'ARRIVAGE"):
-                    try:
-                        new_s = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Membre": "LA NIEBLA", "Action": "Drogue", "Drogue": d_name, "Quantite": float(d_qty), "Butin": 0}])
-                        df_all_r = conn.read(worksheet="Rapports", ttl=0)
-                        conn.update(worksheet="Rapports", data=pd.concat([df_all_r, new_s], ignore_index=True))
-                        st.success("Stock mis à jour !"); time.sleep(1); reset_form(); st.rerun()
-                    except: st.error("Erreur Sheets.")
-
-        # --- AFFICHAGE FINANCIER ---
-        try:
-            df_view = conn.read(worksheet="Tresorerie", ttl=0)
-            if not df_view.empty:
-                st.markdown("---")
-                def calc(df, et):
-                    sub = df[df['Etat'] == et]
-                    return sub[sub['Type'] == 'Recette']['Montant'].sum() - sub[sub['Type'] == 'Dépense']['Montant'].sum()
-                s_sale, s_propre = calc(df_view, 'Sale'), calc(df_view, 'Propre')
-                c1, c2, c3 = st.columns(3)
-                c1.metric("SOLDE PROPRE", f"{s_propre:,.0f} $")
-                c2.metric("SOLDE SALE", f"{s_sale:,.0f} $")
-                c3.metric("TOTAL GLOBAL", f"{(s_propre+s_sale):,.0f} $")
-                st.dataframe(df_view.sort_index(ascending=False).head(10), use_container_width=True)
-        except: pass
+                        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+                        op_s = {"Date": now, "Type": "Dép
