@@ -54,7 +54,6 @@ st.markdown(f"""
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def log_invisible(action, details=""):
-    """Enregistre une action système dans les Rapports sans notification visuelle"""
     try:
         ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         df_r = conn.read(worksheet="Rapports", ttl=0)
@@ -62,10 +61,7 @@ def log_invisible(action, details=""):
             "Date": ts,
             "Membre": st.session_state.get('user_pseudo', 'Système'),
             "Action": f"[LOG] {action}",
-            "Drogue": "N/A",
-            "Quantite": 0,
-            "Butin": 0,
-            "Note": details
+            "Drogue": "N/A", "Quantite": 0, "Butin": 0, "Note": details
         }])
         conn.update(worksheet="Rapports", data=pd.concat([df_r, new_log], ignore_index=True))
     except:
@@ -114,7 +110,6 @@ else:
             st.session_state.clear()
             st.rerun()
 
-    # --- PAGE : TABLEAU DE BORD ---
     if choice == "Tableau de bord":
         st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
         LOGO_URL = "https://raw.githubusercontent.com/lanieblagris/Compta-La-Niebla/main/logo.png?v=4"
@@ -127,13 +122,10 @@ else:
                 now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
                 new_row_rep = pd.DataFrame([{"Date": now, "Membre": st.session_state['user_pseudo'], "Action": action, "Drogue": drogue, "Quantite": float(quantite), "Butin": float(butin)}])
                 new_row_treso = pd.DataFrame([{"Date": now, "Type": "Recette", "Etat": "Sale", "Catégorie": action, "Montant": float(butin), "Note": f"Rapport de {st.session_state['user_pseudo']}"}])
-                
                 df_rep = conn.read(worksheet="Rapports", ttl=0)
                 df_treso = conn.read(worksheet="Tresorerie", ttl=0)
-                
                 conn.update(worksheet="Rapports", data=pd.concat([df_rep, new_row_rep], ignore_index=True))
                 conn.update(worksheet="Tresorerie", data=pd.concat([df_treso, new_row_treso], ignore_index=True))
-                
                 st.success("Transmis avec succès.")
                 time.sleep(1); reset_form(); st.rerun()
             except Exception as e: st.error(f"Erreur : {e}")
@@ -182,7 +174,6 @@ else:
                         c3.progress(min(float(nb_ventes)/300, 1.0), text=f"Ventes: {int(nb_ventes)}")
         except: pass
 
-    # --- PAGE : COMPTABILITÉ (ADMIN) ---
     elif choice == "Comptabilité Globale":
         st.markdown('<div class="gta-title">Tresorerie</div>', unsafe_allow_html=True)
         sub_tabs = st.tabs(["📊 Vue d'ensemble", "🧼 Blanchiment", "📦 Gestion des Stocks"])
@@ -201,7 +192,7 @@ else:
                         new_op = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": t_type, "Etat": t_etat, "Catégorie": t_cat, "Montant": float(t_montant), "Note": t_note}])
                         df_c = conn.read(worksheet="Tresorerie", ttl=0)
                         conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_op], ignore_index=True))
-                        log_invisible("Compta", f"Opération manuelle: {t_cat} ({t_montant}$)")
+                        log_invisible("Compta", f"Opération manuelle: {t_cat}")
                         st.success("Enregistré."); time.sleep(1); reset_form(); st.rerun()
                     except: st.error("Erreur Sheets.")
 
@@ -215,4 +206,7 @@ else:
                     try:
                         propre = m_sale * (1 - taux/100)
                         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-                        op_s = {"Date": now, "Type": "Dép
+                        op_s = {"Date": now, "Type": "Dépense", "Etat": "Sale", "Catégorie": "Blanchiment", "Montant": float(m_sale), "Note": "Sortie blanchiment"}
+                        op_p = {"Date": now, "Type": "Recette", "Etat": "Propre", "Catégorie": "Blanchiment", "Montant": float(propre), "Note": f"Retour (-{taux}%)"}
+                        df_t = conn.read(worksheet="Tresorerie", ttl=0)
+                        conn.update(worksheet="Tresorerie", data=pd.concat([df_t, pd.DataFrame
