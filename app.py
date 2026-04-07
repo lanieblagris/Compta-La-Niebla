@@ -209,4 +209,37 @@ else:
                         op_s = {"Date": now, "Type": "Dépense", "Etat": "Sale", "Catégorie": "Blanchiment", "Montant": float(m_sale), "Note": "Sortie blanchiment"}
                         op_p = {"Date": now, "Type": "Recette", "Etat": "Propre", "Catégorie": "Blanchiment", "Montant": float(propre), "Note": f"Retour (-{taux}%)"}
                         df_t = conn.read(worksheet="Tresorerie", ttl=0)
-                        conn.update(worksheet="Tresorerie", data=pd.concat([df_t, pd.DataFrame
+                        conn.update(worksheet="Tresorerie", data=pd.concat([df_t, pd.DataFrame([op_s, op_p])], ignore_index=True))
+                        log_invisible("Blanchiment", f"{m_sale}$ lavés")
+                        st.success("Blanchi !"); time.sleep(1); reset_form(); st.rerun()
+                    except: st.error("Erreur.")
+
+        with sub_tabs[2]:
+            with st.form(key=f"stk_{st.session_state.form_key}"):
+                st.write("#### 📦 Gestion des Stocks")
+                cs1, cs2 = st.columns(2)
+                d_name = cs1.selectbox("Produit", DRUG_LIST)
+                d_qty = cs2.number_input("Quantité", min_value=0.0)
+                if st.form_submit_button("VALIDER L'ARRIVAGE"):
+                    try:
+                        new_s = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Membre": "LA NIEBLA", "Action": "Drogue", "Drogue": d_name, "Quantite": float(d_qty), "Butin": 0}])
+                        df_all_r = conn.read(worksheet="Rapports", ttl=0)
+                        conn.update(worksheet="Rapports", data=pd.concat([df_all_r, new_s], ignore_index=True))
+                        log_invisible("Stock", f"Ajout {d_qty} {d_name}")
+                        st.success("Stock mis à jour !"); time.sleep(1); reset_form(); st.rerun()
+                    except: st.error("Erreur Sheets.")
+
+        try:
+            df_view = conn.read(worksheet="Tresorerie", ttl=0)
+            if not df_view.empty:
+                st.markdown("---")
+                def calc(df, et):
+                    sub = df[df['Etat'] == et]
+                    return sub[sub['Type'] == 'Recette']['Montant'].sum() - sub[sub['Type'] == 'Dépense']['Montant'].sum()
+                s_sale, s_propre = calc(df_view, 'Sale'), calc(df_view, 'Propre')
+                c1, c2, c3 = st.columns(3)
+                c1.metric("SOLDE PROPRE", f"{s_propre:,.0f} $")
+                c2.metric("SOLDE SALE", f"{s_sale:,.0f} $")
+                c3.metric("TOTAL GLOBAL", f"{(s_propre+s_sale):,.0f} $")
+                st.dataframe(df_view.sort_index(ascending=False).head(10), use_container_width=True)
+        except: pass
