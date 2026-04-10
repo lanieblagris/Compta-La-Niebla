@@ -15,7 +15,6 @@ USERS = {
     "Dany": {"password": "081219", "pseudo": "Dany Smith"},
     "Emilio": {"password": "azertyuiop123", "pseudo": "Emilio Montoya"},
     "Aziz": {"password": "asmith", "pseudo": "Aziz Smith"},
-    "Junior": {"password": "Loup1304", "pseudo": "Madra Junior"},
     "Alain": {"password": "999cww59", "pseudo": "Alain Bourdin"},
 }
 
