@@ -1,7 +1,8 @@
-import streamlit as st
+iimport streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import datetime
+from datetime import timedelta
 import time
 
 # --- 1. CONFIGURATION ET CONSTANTES GLOBALES ---
@@ -49,30 +50,23 @@ st.markdown(f"""
     <video autoplay loop muted playsinline id="bgVideo"><source src="{VIDEO_URL}" type="video/mp4"></video>
     """, unsafe_allow_html=True)
 
-# --- 3. CONNEXION ET LOGS INVISIBLES ---
+# --- 3. FONCTIONS SYSTÈME ---
 conn = st.connection("gsheets", type=GSheetsConnection)
+
+def get_now():
+    # Ajuste ici : hours=2 pour l'heure d'été France, hours=1 pour l'hiver
+    return (datetime.datetime.now() + timedelta(hours=2)).strftime("%Y-%m-%d %H:%M")
 
 def log_invisible(action, details=""):
     try:
-        ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+        ts = get_now()
         df_r = conn.read(worksheet="Rapports", ttl=0)
-        new_log = pd.DataFrame([{
-            "Date": ts,
-            "Membre": st.session_state.get('user_pseudo', 'Système'),
-            "Action": f"[LOG] {action}",
-            "Drogue": "N/A", "Quantite": 0, "Butin": 0, "Note": details
-        }])
+        new_log = pd.DataFrame([{"Date": ts, "Membre": st.session_state.get('user_pseudo', 'Système'), "Action": f"[LOG] {action}", "Drogue": "N/A", "Quantite": 0, "Butin": 0, "Note": details}])
         conn.update(worksheet="Rapports", data=pd.concat([df_r, new_log], ignore_index=True))
-    except:
-        pass
+    except: pass
 
-if 'connected' not in st.session_state:
-    st.session_state['connected'] = False
-if "form_key" not in st.session_state:
-    st.session_state.form_key = 0
-
-def reset_form():
-    st.session_state.form_key += 1
+if 'connected' not in st.session_state: st.session_state['connected'] = False
+if "form_key" not in st.session_state: st.session_state.form_key = 0
 
 def check_login():
     u = st.session_state.get("user_login")
@@ -84,7 +78,6 @@ def check_login():
         log_invisible("Connexion", f"Login réussi pour {u}")
     else:
         st.error("Accès refusé.")
-
 # --- 4. AFFICHAGE ET NAVIGATION ---
 if not st.session_state['connected']:
     st.write("<br><br><br>", unsafe_allow_html=True)
