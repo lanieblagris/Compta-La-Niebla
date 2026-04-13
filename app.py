@@ -97,7 +97,7 @@ else:
     if choice == "Tableau de bord":
         st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
         
-        # 1. MES 3 DERNIÈRES ACTIONS (POUR LE MEMBRE CONNECTÉ)
+        # 1. MES 3 DERNIÈRES ACTIONS PERSONNELLES
         st.write("### 🕒 Mes 3 dernières activités")
         try:
             df_full = conn.read(worksheet="Rapports", ttl=0)
@@ -114,7 +114,7 @@ else:
 
         st.markdown("---")
         
-        # 2. ONGLETS DE SAISIE
+        # 2. FORMULAIRES DE SAISIE
         tabs = st.tabs(["💰 ATM", "🛒 Supérette", "🏎️ Go Fast", "🏠 Cambriolage", "🌿 Drogue"])
 
         def handle_submit(action, butin=0, drogue="N/A", quantite=0):
@@ -153,8 +153,8 @@ else:
 
         st.markdown("---")
 
-        # 3. SUIVI DE TOUS LES MEMBRES (RÉCAPITULATIF SEMAINE)
-        st.write("### 📊 Activité Totale de la Semaine (Tous les membres)")
+        # 3. SUIVI GÉNÉRAL (BARRES + TABLEAU)
+        st.write("### 📊 Objectifs de la Semaine (Tous les membres)")
         try:
             if not df_full.empty:
                 df_stats = df_full.copy()
@@ -166,15 +166,34 @@ else:
                     (~df_stats['Action'].str.contains(r'\[LOG\]', na=False))
                 ]
                 
+                # --- PARTIE A : BARRES DE PROGRESSION ---
+                for p_id, p_info in USERS.items():
+                    if p_id != "Admin":
+                        pseudo = p_info["pseudo"]
+                        user_data = week_data[week_data['Membre'] == pseudo]
+                        
+                        # Calculer Actions (Hors drogue) et Ventes (Somme quantité drogue)
+                        nb_actions = len(user_data[user_data['Action'] != "Drogue"])
+                        nb_ventes = abs(user_data[user_data['Action'] == "Drogue"]['Quantite'].sum())
+                        
+                        c1, c2, c3 = st.columns([1, 2, 2])
+                        c1.write(f"**{pseudo}**")
+                        c2.progress(min(float(nb_actions)/20, 1.0), text=f"Actions: {nb_actions}/20")
+                        c3.progress(min(float(nb_ventes)/300, 1.0), text=f"Ventes: {int(nb_ventes)}/300")
+
+                st.write("<br>", unsafe_allow_html=True)
+                
+                # --- PARTIE B : TABLEAU DÉTAILLÉ ---
+                st.write("#### 📈 Détail des activités")
                 if not week_data.empty:
                     pivot = week_data.groupby(['Membre', 'Action']).size().unstack(fill_value=0)
                     st.dataframe(pivot, use_container_width=True)
                 else:
-                    st.info("Aucune donnée pour cette semaine.")
+                    st.info("Aucune donnée enregistrée cette semaine.")
         except Exception as e:
-            st.error(f"Erreur stats : {e}")
+            st.error(f"Erreur affichage statistiques : {e}")
 
-    # --- AUTRES PAGES ---
+    # --- PAGES ADMIN ---
     elif choice == "Archives de la Niebla":
         st.markdown('<div class="gta-title">Archives</div>', unsafe_allow_html=True)
         df_arc = conn.read(worksheet="Rapports", ttl=0)
