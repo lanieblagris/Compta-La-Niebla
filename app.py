@@ -25,41 +25,26 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. FONCTIONS SYSTÈME & CONNEXION ---
-conn = st.connection("gsheets", type=GSheetsConnection)
-
-def get_members():
-    try:
-        return conn.read(worksheet="Membres", ttl=0)
-    except:
-        return pd.DataFrame(columns=["Login", "Password", "Pseudo", "Role"])
-
-def log_invisible(action, details=""):
-    try:
-        ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-        df_r = conn.read(worksheet="Rapports", ttl=0)
-        new_log = pd.DataFrame([{"Date": ts, "Membre": st.session_state.get('user_pseudo', 'Système'), "Action": f"[LOG] {action}", "Drogue": "N/A", "Quantite": 0, "Butin": 0, "Note": details}])
-        conn.update(worksheet="Rapports", data=pd.concat([df_r, new_log], ignore_index=True))
-    except: pass
-
-if 'connected' not in st.session_state:
-    st.session_state['connected'] = False
-if "form_key" not in st.session_state:
-    st.session_state.form_key = 0
-
-def reset_form():
-    st.session_state.form_key += 1
-
 def check_login():
     df_m = get_members()
     u_input = st.session_state.get("user_login")
     p_input = str(st.session_state.get("password_login"))
     
     if not df_m.empty:
-        df_m['Login'] = df_m['Login'].astype(str)
-        # Nettoyage automatique des .0 si Google Sheets transforme le MDP en nombre
-        df_m['Password'] = df_m['Password'].astype(str).str.replace('.0', '', regex=False)
+        # --- BLOC DE DIAGNOSTIC ---
+        st.write("### 🔍 Diagnostic Connexion")
+        st.write(f"Tu as tapé Login: [{u_input}]")
+        st.write(f"Tu as tapé MDP: [{p_input}]")
         
+        # On prépare les données du Sheets pour la comparaison
+        df_m['Login'] = df_m['Login'].astype(str).str.strip()
+        df_m['Password'] = df_m['Password'].astype(str).str.replace('.0', '', regex=False).str.strip()
+        
+        # On affiche ce que le code voit dans la première ligne du Sheets
+        first_user = df_m.iloc[0]
+        st.write(f"Dans le Sheets, ligne 1 voit : Login: [{first_user['Login']}] | MDP: [{first_user['Password']}]")
+        # --------------------------
+
         user_row = df_m[(df_m['Login'] == u_input) & (df_m['Password'] == p_input)]
         
         if not user_row.empty:
@@ -69,9 +54,7 @@ def check_login():
             st.session_state['user_pseudo'] = user_row.iloc[0]['Pseudo']
             log_invisible("Connexion", "Succès")
             return
-    st.error("Identifiants incorrects.")
-
-# --- 3. PAGE DE CONNEXION ---
+    st.error("Identifiants incorrects.")# --- 3. PAGE DE CONNEXION ---
 if not st.session_state['connected']:
     st.write("<br><br><br>", unsafe_allow_html=True)
     st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
