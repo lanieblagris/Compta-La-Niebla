@@ -70,6 +70,10 @@ def reset_form():
 
 def check_login():
     df_m = get_members()
+    st.write("--- DEBUG ---")
+st.write("Colonnes détectées :", df_m.columns.tolist())
+st.write("Nombre de membres trouvés :", len(df_m))
+st.dataframe(df_m) # Affiche le tableau complet pour vérifier
     u = st.session_state.get("user_login")
     p = st.session_state.get("password_login")
     
