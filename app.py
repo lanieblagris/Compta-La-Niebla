@@ -157,7 +157,7 @@ else:
 
         st.markdown("---")
 
-        # --- C. MES 3 DERNIÈRES ACTIONS (BUTIN CORRIGÉ) ---
+        # --- C. MES 3 DERNIÈRES ACTIONS (TOUT EN BAS) ---
         st.write("### 🕒 Mes 3 dernières activités")
         try:
             if not df_full.empty:
@@ -167,7 +167,7 @@ else:
                 ].tail(3).iloc[::-1].copy()
                 
                 if not ma_compta.empty:
-                    # Formatage propre du butin : 3000 -> 3 000 $
+                    # Formatage propre du butin : ex 3000 -> 3 000 $
                     ma_compta['Butin'] = ma_compta['Butin'].apply(lambda x: f"{int(x):,} $".replace(',', ' '))
                     st.table(ma_compta[['Date', 'Action', 'Butin']])
                 else: st.info("Aucune action récente.")
