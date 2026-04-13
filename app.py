@@ -103,4 +103,81 @@ else:
                 df_rep = conn.read(worksheet="Rapports", ttl=0)
                 df_treso = conn.read(worksheet="Tresorerie", ttl=0)
                 new_rep = pd.DataFrame([{"Date": ts, "Membre": st.session_state['user_pseudo'], "Action": action, "Drogue": drogue, "Quantite": float(quantite), "Butin": float(butin)}])
-                new_treso
+                new_treso = pd.DataFrame([{"Date": ts, "Type": "Recette", "Etat": "Sale", "Catégorie": action, "Montant": float(butin), "Note": f"Rapport de {st.session_state['user_pseudo']}"}])
+                conn.update(worksheet="Rapports", data=pd.concat([df_rep, new_rep], ignore_index=True))
+                conn.update(worksheet="Tresorerie", data=pd.concat([df_treso, new_treso], ignore_index=True))
+                st.success("Transmis !"); time.sleep(1); st.session_state.form_key += 1; st.rerun()
+            except Exception as e: st.error(f"Erreur : {e}")
+
+        with tabs[0]:
+            with st.form(key=f"atm_{st.session_state.form_key}"):
+                b = st.number_input("Butin ATM ($)", min_value=0)
+                if st.form_submit_button("VALIDER"): handle_submit("ATM", butin=b)
+        with tabs[1]:
+            with st.form(key=f"sup_{st.session_state.form_key}"):
+                b = st.number_input("Butin Supérette ($)", min_value=0)
+                if st.form_submit_button("VALIDER"): handle_submit("Supérette", butin=b)
+        with tabs[2]:
+            with st.form(key=f"gf_{st.session_state.form_key}"):
+                b = st.number_input("Butin Go Fast ($)", min_value=0)
+                if st.form_submit_button("VALIDER"): handle_submit("Go Fast", butin=b)
+        with tabs[3]:
+            with st.form(key=f"cam_{st.session_state.form_key}"):
+                if st.form_submit_button("VALIDER CAMBRIOLAGE"): handle_submit("Cambriolage")
+        with tabs[4]:
+            with st.form(key=f"dr_{st.session_state.form_key}"):
+                d_select = st.selectbox("Produit", DRUG_LIST)
+                q = st.number_input("Quantité", min_value=0.0)
+                b = st.number_input("Prix total ($)", min_value=0)
+                if st.form_submit_button("VALIDER VENTE"): handle_submit("Drogue", butin=b, drogue=d_select, quantite=-abs(q))
+
+        st.markdown("---")
+
+        # --- B. OBJECTIFS DE LA SEMAINE ---
+        st.write("### 📊 Objectifs de la Semaine (Tous les membres)")
+        try:
+            df_full = conn.read(worksheet="Rapports", ttl=0)
+            if not df_full.empty:
+                df_stats = df_full.copy()
+                df_stats['Date'] = pd.to_datetime(df_stats['Date'], errors='coerce')
+                start_week = (datetime.datetime.now() - datetime.timedelta(days=datetime.datetime.now().weekday())).replace(hour=0, minute=0, second=0)
+                week_data = df_stats[(df_stats['Date'] >= start_week) & (~df_stats['Action'].str.contains(r'\[LOG\]', na=False))]
+                
+                for p_id, p_info in USERS.items():
+                    if p_id != "Admin":
+                        pseudo = p_info["pseudo"]
+                        user_data = week_data[week_data['Membre'] == pseudo]
+                        nb_actions = len(user_data[user_data['Action'] != "Drogue"])
+                        nb_ventes = abs(user_data[user_data['Action'] == "Drogue"]['Quantite'].sum())
+                        c1, c2, c3 = st.columns([1, 2, 2])
+                        c1.write(f"**{pseudo}**")
+                        c2.progress(min(float(nb_actions)/20, 1.0), text=f"Actions: {nb_actions}/20")
+                        c3.progress(min(float(nb_ventes)/300, 1.0), text=f"Ventes: {int(nb_ventes)}/300")
+        except: pass
+
+        st.markdown("---")
+
+        # --- C. MES 3 DERNIÈRES ACTIONS (DÉPLACÉ ICI) ---
+        st.write("### 🕒 Mes 3 dernières activités")
+        try:
+            if not df_full.empty:
+                ma_compta = df_full[
+                    (df_full['Membre'] == st.session_state['user_pseudo']) & 
+                    (~df_full['Action'].str.contains(r'\[LOG\]', na=False))
+                ].tail(3).iloc[::-1].copy()
+                
+                if not ma_compta.empty:
+                    # Formatage propre du butin
+                    ma_compta['Butin'] = ma_compta['Butin'].apply(lambda x: f"{int(x):,} $".replace(',', ' '))
+                    st.table(ma_compta[['Date', 'Action', 'Butin']])
+                else: st.info("Aucune action récente.")
+        except: pass
+
+    elif choice == "Archives de la Niebla":
+        st.markdown('<div class="gta-title">Archives</div>', unsafe_allow_html=True)
+        df_arc = conn.read(worksheet="Rapports", ttl=0)
+        st.dataframe(df_arc.sort_index(ascending=False), use_container_width=True)
+
+    elif choice == "Comptabilité Globale":
+        st.markdown('<div class="gta-title">Tresorerie</div>', unsafe_allow_html=True)
+        # Logique compta...
