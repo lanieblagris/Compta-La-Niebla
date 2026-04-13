@@ -8,15 +8,7 @@ import time
 st.set_page_config(page_title="La Niebla - FlashBack FA", page_icon="🥷", layout="wide")
 
 DRUG_LIST = ["Marijuana", "Cocaine", "Meth", "Heroine", "Tranq", "Carte Prépayer", "B-magic", "Crack", "Autre"]
-
-USERS = {
-    "Admin": {"password": "0000", "pseudo": "El Patron"},
-    "Alex": {"password": "Alx220717", "pseudo": "Alex Smith"},
-    "Dany": {"password": "081219", "pseudo": "Dany Smith"},
-    "Emilio": {"password": "azertyuiop123", "pseudo": "Emilio Montoya"},
-    "Aziz": {"password": "asmith", "pseudo": "Aziz Smith"},
-    "Alain": {"password": "999cww59", "pseudo": "Alain Bourdin"},
-}
+ROLES_LIST = ["Líder", "Mano Derecha", "Soldado", "Recrue", "Infiltré"]
 
 # --- 2. STYLE CSS & BACKGROUND ---
 VIDEO_URL = "https://assets.mixkit.co/videos/preview/mixkit-mysterious-pale-fog-moving-slowly-over-the-ground-44130-large.mp4"
@@ -49,11 +41,10 @@ st.markdown(f"""
     <video autoplay loop muted playsinline id="bgVideo"><source src="{VIDEO_URL}" type="video/mp4"></video>
     """, unsafe_allow_html=True)
 
-# --- 3. CONNEXION ET LOGS INVISIBLES ---
+# --- 3. CONNEXION ET FONCTIONS ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def log_invisible(action, details=""):
-    """Enregistre une action système dans les Rapports sans notification visuelle"""
     try:
         ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         df_r = conn.read(worksheet="Rapports", ttl=0)
@@ -64,8 +55,10 @@ def log_invisible(action, details=""):
             "Drogue": "N/A", "Quantite": 0, "Butin": 0, "Note": details
         }])
         conn.update(worksheet="Rapports", data=pd.concat([df_r, new_log], ignore_index=True))
-    except:
-        pass
+    except: pass
+
+def get_members():
+    return conn.read(worksheet="Membres", ttl=0)
 
 if 'connected' not in st.session_state:
     st.session_state['connected'] = False
@@ -76,12 +69,19 @@ def reset_form():
     st.session_state.form_key += 1
 
 def check_login():
+    df_m = get_members()
     u = st.session_state.get("user_login")
     p = st.session_state.get("password_login")
-    if u in USERS and USERS[u]["password"] == p:
+    
+    # Recherche du membre dans la feuille Google Sheets
+    user_row = df_m[(df_m['Login'] == u) & (df_m['Password'].astype(str) == str(p))]
+    
+    if not user_row.empty:
         st.session_state['connected'] = True
-        st.session_state['user_role'] = u
-        st.session_state['user_pseudo'] = USERS[u]["pseudo"]
+        # Si c'est le compte Admin, on lui donne le rôle Admin système
+        st.session_state['user_role'] = "Admin" if u == "Admin" else user_row.iloc[0]['Role']
+        st.session_state['user_login_name'] = u
+        st.session_state['user_pseudo'] = user_row.iloc[0]['Pseudo']
         log_invisible("Connexion", f"Login réussi pour {u}")
     else:
         st.error("Accès refusé.")
@@ -102,10 +102,14 @@ if not st.session_state['connected']:
 else:
     with st.sidebar:
         st.write(f"### 🥷 {st.session_state['user_pseudo']}")
+        st.write(f"Grade : **{st.session_state['user_role']}**")
         menu = ["Tableau de bord"]
-        if st.session_state['user_role'] == "Admin": 
+        # Seul le Login "Admin" a accès aux outils de gestion
+        if st.session_state['user_login_name'] == "Admin": 
             menu.append("Comptabilité Globale")
+            menu.append("Gestion des Membres")
             menu.append("Archives de la Niebla")
+            
         choice = st.radio("Navigation", menu)
         if st.button("Déconnexion"):
             log_invisible("Déconnexion", "Session fermée")
@@ -133,7 +137,6 @@ else:
                 time.sleep(1); reset_form(); st.rerun()
             except Exception as e: st.error(f"Erreur : {e}")
 
-        # ... (Contenu des tabs ATM, Supérette, etc. inchangé) ...
         with tabs[0]:
             with st.form(key=f"atm_{st.session_state.form_key}"):
                 b = st.number_input("💵 Butin ($)", min_value=0)
@@ -162,14 +165,15 @@ else:
         st.write("### 📊 STATISTIQUES DE LA SEMAINE")
         try:
             df_stats = conn.read(worksheet="Rapports", ttl=0)
+            df_m_list = get_members()
             if not df_stats.empty:
                 df_stats['Date'] = pd.to_datetime(df_stats['Date'], errors='coerce')
                 start_week = (datetime.datetime.now() - datetime.timedelta(days=datetime.datetime.now().weekday())).replace(hour=0, minute=0, second=0)
-                # FILTRE : On ignore les lignes de LOG pour les stats
                 week_data = df_stats[(df_stats['Date'] >= start_week) & (~df_stats['Action'].str.contains(r'\[LOG\]', na=False))].copy()
-                for p_id, p_info in USERS.items():
-                    if p_id != "Admin":
-                        pseudo = p_info["pseudo"]
+                
+                for _, m_row in df_m_list.iterrows():
+                    if m_row['Login'] != "Admin":
+                        pseudo = m_row["Pseudo"]
                         user_data = week_data[week_data['Membre'] == pseudo]
                         nb_actions = len(user_data[user_data['Action'] != "Drogue"])
                         nb_ventes = abs(user_data[user_data['Action'] == "Drogue"]['Quantite'].sum())
@@ -179,25 +183,41 @@ else:
                         c3.progress(min(float(nb_ventes)/300, 1.0), text=f"Ventes: {int(nb_ventes)}")
         except: pass
 
-    # --- PAGE : ARCHIVES (ADMIN UNIQUEMENT) ---
+    # --- PAGE : GESTION DES MEMBRES (ADMIN UNIQUEMENT) ---
+    elif choice == "Gestion des Membres":
+        st.markdown('<div class="gta-title">Membres</div>', unsafe_allow_html=True)
+        df_m = get_members()
+        st.write("### 🗃️ Liste des membres et grades")
+        
+        for index, row in df_m.iterrows():
+            if row['Login'] == "Admin": continue
+            
+            col1, col2, col3 = st.columns([2, 2, 1])
+            col1.write(f"👤 **{row['Pseudo']}**")
+            
+            # Sélecteur de rôle
+            current_role = row['Role']
+            idx = ROLES_LIST.index(current_role) if current_role in ROLES_LIST else 0
+            new_role = col2.selectbox(f"Grade de {row['Login']}", ROLES_LIST, index=idx, key=f"sel_{row['Login']}")
+            
+            if col3.button("Mettre à jour", key=f"btn_{row['Login']}"):
+                df_m.at[index, 'Role'] = new_role
+                conn.update(worksheet="Membres", data=df_m)
+                log_invisible("Grade", f"{row['Pseudo']} promu {new_role}")
+                st.success("Mis à jour !"); time.sleep(1); st.rerun()
+
+    # --- PAGE : ARCHIVES ---
     elif choice == "Archives de la Niebla":
         st.markdown('<div class="gta-title">Archives</div>', unsafe_allow_html=True)
-        st.write("### 📜 Journal de bord complet")
-        
         try:
             df_arc = conn.read(worksheet="Rapports", ttl=0)
-            filtre = st.radio("Affichage", ["Toutes les activités", "Rapports uniquement", "Logs Système uniquement"], horizontal=True)
-            
-            if filtre == "Rapports uniquement":
-                df_arc = df_arc[~df_arc['Action'].str.contains(r'\[LOG\]', na=False)]
-            elif filtre == "Logs Système uniquement":
-                df_arc = df_arc[df_arc['Action'].str.contains(r'\[LOG\]', na=False)]
-            
+            filtre = st.radio("Affichage", ["Toutes", "Rapports", "Logs Système"], horizontal=True)
+            if filtre == "Rapports": df_arc = df_arc[~df_arc['Action'].str.contains(r'\[LOG\]', na=False)]
+            elif filtre == "Logs Système": df_arc = df_arc[df_arc['Action'].str.contains(r'\[LOG\]', na=False)]
             st.dataframe(df_arc.sort_index(ascending=False), use_container_width=True)
-        except:
-            st.error("Impossible de lire les archives.")
+        except: st.error("Erreur archives.")
 
-    # --- PAGE : COMPTABILITÉ (ADMIN) ---
+    # --- PAGE : COMPTABILITÉ ---
     elif choice == "Comptabilité Globale":
         st.markdown('<div class="gta-title">Tresorerie</div>', unsafe_allow_html=True)
         sub_tabs = st.tabs(["📊 Vue d'ensemble", "🧼 Blanchiment", "📦 Gestion des Stocks"])
