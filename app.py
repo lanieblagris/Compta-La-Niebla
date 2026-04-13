@@ -97,7 +97,7 @@ else:
     if choice == "Tableau de bord":
         st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
         
-        # 1. MES 3 DERNIÈRES ACTIONS (POUR LE MEMBRE)
+        # 1. MES 3 DERNIÈRES ACTIONS (POUR LE MEMBRE CONNECTÉ)
         st.write("### 🕒 Mes 3 dernières activités")
         try:
             df_full = conn.read(worksheet="Rapports", ttl=0)
@@ -135,4 +135,61 @@ else:
                 if st.form_submit_button("VALIDER"): handle_submit("ATM", butin=b)
         with tabs[1]:
             with st.form(key=f"sup_{st.session_state.form_key}"):
-                b = st.number_input("Butin
+                b = st.number_input("Butin Supérette ($)", min_value=0)
+                if st.form_submit_button("VALIDER"): handle_submit("Supérette", butin=b)
+        with tabs[2]:
+            with st.form(key=f"gf_{st.session_state.form_key}"):
+                b = st.number_input("Butin Go Fast ($)", min_value=0)
+                if st.form_submit_button("VALIDER"): handle_submit("Go Fast", butin=b)
+        with tabs[3]:
+            with st.form(key=f"cam_{st.session_state.form_key}"):
+                if st.form_submit_button("VALIDER CAMBRIOLAGE"): handle_submit("Cambriolage")
+        with tabs[4]:
+            with st.form(key=f"dr_{st.session_state.form_key}"):
+                d_select = st.selectbox("Produit", DRUG_LIST)
+                q = st.number_input("Quantité", min_value=0.0)
+                b = st.number_input("Prix total ($)", min_value=0)
+                if st.form_submit_button("VALIDER VENTE"): handle_submit("Drogue", butin=b, drogue=d_select, quantite=-abs(q))
+
+        st.markdown("---")
+
+        # 3. SUIVI DE TOUS LES MEMBRES (RÉCAPITULATIF SEMAINE)
+        st.write("### 📊 Activité Totale de la Semaine (Tous les membres)")
+        try:
+            if not df_full.empty:
+                df_stats = df_full.copy()
+                df_stats['Date'] = pd.to_datetime(df_stats['Date'], errors='coerce')
+                start_week = (datetime.datetime.now() - datetime.timedelta(days=datetime.datetime.now().weekday())).replace(hour=0, minute=0, second=0)
+                
+                week_data = df_stats[
+                    (df_stats['Date'] >= start_week) & 
+                    (~df_stats['Action'].str.contains(r'\[LOG\]', na=False))
+                ]
+                
+                if not week_data.empty:
+                    pivot = week_data.groupby(['Membre', 'Action']).size().unstack(fill_value=0)
+                    st.dataframe(pivot, use_container_width=True)
+                else:
+                    st.info("Aucune donnée pour cette semaine.")
+        except Exception as e:
+            st.error(f"Erreur stats : {e}")
+
+    # --- AUTRES PAGES ---
+    elif choice == "Archives de la Niebla":
+        st.markdown('<div class="gta-title">Archives</div>', unsafe_allow_html=True)
+        df_arc = conn.read(worksheet="Rapports", ttl=0)
+        st.dataframe(df_arc.sort_index(ascending=False), use_container_width=True)
+
+    elif choice == "Comptabilité Globale":
+        st.markdown('<div class="gta-title">Tresorerie</div>', unsafe_allow_html=True)
+        df_view = conn.read(worksheet="Tresorerie", ttl=0)
+        if not df_view.empty:
+            def calc(df, et):
+                sub = df[df['Etat'] == et]
+                return sub[sub['Type'] == 'Recette']['Montant'].sum() - sub[sub['Type'] == 'Dépense']['Montant'].sum()
+            s_sale, s_propre = calc(df_view, 'Sale'), calc(df_view, 'Propre')
+            c1, c2, c3 = st.columns(3)
+            c1.metric("SOLDE PROPRE", f"{s_propre:,.0f} $")
+            c2.metric("SOLDE SALE", f"{s_sale:,.0f} $")
+            c3.metric("TOTAL GLOBAL", f"{(s_propre+s_sale):,.0f} $")
+            st.dataframe(df_view.sort_index(ascending=False).head(20), use_container_width=True)
