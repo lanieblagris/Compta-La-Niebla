@@ -19,7 +19,7 @@ USERS = {
     "Alain": {"password": "999cww59", "pseudo": "Alain Bourdin"},
 }
 
-# --- 2. STYLE CSS & DESIGN ---
+# --- 2. STYLE CSS ---
 VIDEO_URL = "https://assets.mixkit.co/videos/preview/mixkit-mysterious-pale-fog-moving-slowly-over-the-ground-44130-large.mp4"
 
 st.markdown(f"""
@@ -41,11 +41,10 @@ st.markdown(f"""
     <video autoplay loop muted playsinline id="bgVideo"><source src="{VIDEO_URL}" type="video/mp4"></video>
     """, unsafe_allow_html=True)
 
-# --- 3. FONCTIONS SYSTÈME & HEURE ---
+# --- 3. FONCTIONS SYSTÈME ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def get_now():
-    """Heure actuelle France (UTC+2)"""
     return (datetime.datetime.now() + timedelta(hours=2)).strftime("%Y-%m-%d %H:%M")
 
 def log_invisible(action, details=""):
@@ -66,9 +65,8 @@ def check_login():
         st.session_state['connected'] = True
         st.session_state['user_role'] = u
         st.session_state['user_pseudo'] = USERS[u]["pseudo"]
-        log_invisible("Connexion", f"Login réussi")
-    else:
-        st.error("Identifiants incorrects.")
+        log_invisible("Connexion")
+    else: st.error("Accès refusé.")
 
 # --- 4. INTERFACE ---
 if not st.session_state['connected']:
@@ -83,7 +81,6 @@ if not st.session_state['connected']:
                 check_login()
                 if st.session_state['connected']: st.rerun()
 else:
-    # SIDEBAR
     with st.sidebar:
         st.write(f"### 🥷 {st.session_state['user_pseudo']}")
         menu = ["Tableau de bord"]
@@ -97,24 +94,7 @@ else:
     if choice == "Tableau de bord":
         st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
         
-        # 1. MES 3 DERNIÈRES ACTIONS PERSONNELLES
-        st.write("### 🕒 Mes 3 dernières activités")
-        try:
-            df_full = conn.read(worksheet="Rapports", ttl=0)
-            if not df_full.empty:
-                ma_compta = df_full[
-                    (df_full['Membre'] == st.session_state['user_pseudo']) & 
-                    (~df_full['Action'].str.contains(r'\[LOG\]', na=False))
-                ].tail(3).iloc[::-1]
-                if not ma_compta.empty:
-                    st.table(ma_compta[['Date', 'Action', 'Butin']])
-                else:
-                    st.info("Aucune action récente.")
-        except: pass
-
-        st.markdown("---")
-        
-        # 2. FORMULAIRES DE SAISIE
+        # --- A. ONGLETS DE SAISIE ---
         tabs = st.tabs(["💰 ATM", "🛒 Supérette", "🏎️ Go Fast", "🏠 Cambriolage", "🌿 Drogue"])
 
         def handle_submit(action, butin=0, drogue="N/A", quantite=0):
@@ -123,92 +103,4 @@ else:
                 df_rep = conn.read(worksheet="Rapports", ttl=0)
                 df_treso = conn.read(worksheet="Tresorerie", ttl=0)
                 new_rep = pd.DataFrame([{"Date": ts, "Membre": st.session_state['user_pseudo'], "Action": action, "Drogue": drogue, "Quantite": float(quantite), "Butin": float(butin)}])
-                new_treso = pd.DataFrame([{"Date": ts, "Type": "Recette", "Etat": "Sale", "Catégorie": action, "Montant": float(butin), "Note": f"Rapport de {st.session_state['user_pseudo']}"}])
-                conn.update(worksheet="Rapports", data=pd.concat([df_rep, new_rep], ignore_index=True))
-                conn.update(worksheet="Tresorerie", data=pd.concat([df_treso, new_treso], ignore_index=True))
-                st.success("Transmis !"); time.sleep(1); st.session_state.form_key += 1; st.rerun()
-            except Exception as e: st.error(f"Erreur : {e}")
-
-        with tabs[0]:
-            with st.form(key=f"atm_{st.session_state.form_key}"):
-                b = st.number_input("Butin ATM ($)", min_value=0)
-                if st.form_submit_button("VALIDER"): handle_submit("ATM", butin=b)
-        with tabs[1]:
-            with st.form(key=f"sup_{st.session_state.form_key}"):
-                b = st.number_input("Butin Supérette ($)", min_value=0)
-                if st.form_submit_button("VALIDER"): handle_submit("Supérette", butin=b)
-        with tabs[2]:
-            with st.form(key=f"gf_{st.session_state.form_key}"):
-                b = st.number_input("Butin Go Fast ($)", min_value=0)
-                if st.form_submit_button("VALIDER"): handle_submit("Go Fast", butin=b)
-        with tabs[3]:
-            with st.form(key=f"cam_{st.session_state.form_key}"):
-                if st.form_submit_button("VALIDER CAMBRIOLAGE"): handle_submit("Cambriolage")
-        with tabs[4]:
-            with st.form(key=f"dr_{st.session_state.form_key}"):
-                d_select = st.selectbox("Produit", DRUG_LIST)
-                q = st.number_input("Quantité", min_value=0.0)
-                b = st.number_input("Prix total ($)", min_value=0)
-                if st.form_submit_button("VALIDER VENTE"): handle_submit("Drogue", butin=b, drogue=d_select, quantite=-abs(q))
-
-        st.markdown("---")
-
-        # 3. SUIVI GÉNÉRAL (BARRES + TABLEAU)
-        st.write("### 📊 Objectifs de la Semaine (Tous les membres)")
-        try:
-            if not df_full.empty:
-                df_stats = df_full.copy()
-                df_stats['Date'] = pd.to_datetime(df_stats['Date'], errors='coerce')
-                start_week = (datetime.datetime.now() - datetime.timedelta(days=datetime.datetime.now().weekday())).replace(hour=0, minute=0, second=0)
-                
-                week_data = df_stats[
-                    (df_stats['Date'] >= start_week) & 
-                    (~df_stats['Action'].str.contains(r'\[LOG\]', na=False))
-                ]
-                
-                # --- PARTIE A : BARRES DE PROGRESSION ---
-                for p_id, p_info in USERS.items():
-                    if p_id != "Admin":
-                        pseudo = p_info["pseudo"]
-                        user_data = week_data[week_data['Membre'] == pseudo]
-                        
-                        # Calculer Actions (Hors drogue) et Ventes (Somme quantité drogue)
-                        nb_actions = len(user_data[user_data['Action'] != "Drogue"])
-                        nb_ventes = abs(user_data[user_data['Action'] == "Drogue"]['Quantite'].sum())
-                        
-                        c1, c2, c3 = st.columns([1, 2, 2])
-                        c1.write(f"**{pseudo}**")
-                        c2.progress(min(float(nb_actions)/20, 1.0), text=f"Actions: {nb_actions}/20")
-                        c3.progress(min(float(nb_ventes)/300, 1.0), text=f"Ventes: {int(nb_ventes)}/300")
-
-                st.write("<br>", unsafe_allow_html=True)
-                
-                # --- PARTIE B : TABLEAU DÉTAILLÉ ---
-                st.write("#### 📈 Détail des activités")
-                if not week_data.empty:
-                    pivot = week_data.groupby(['Membre', 'Action']).size().unstack(fill_value=0)
-                    st.dataframe(pivot, use_container_width=True)
-                else:
-                    st.info("Aucune donnée enregistrée cette semaine.")
-        except Exception as e:
-            st.error(f"Erreur affichage statistiques : {e}")
-
-    # --- PAGES ADMIN ---
-    elif choice == "Archives de la Niebla":
-        st.markdown('<div class="gta-title">Archives</div>', unsafe_allow_html=True)
-        df_arc = conn.read(worksheet="Rapports", ttl=0)
-        st.dataframe(df_arc.sort_index(ascending=False), use_container_width=True)
-
-    elif choice == "Comptabilité Globale":
-        st.markdown('<div class="gta-title">Tresorerie</div>', unsafe_allow_html=True)
-        df_view = conn.read(worksheet="Tresorerie", ttl=0)
-        if not df_view.empty:
-            def calc(df, et):
-                sub = df[df['Etat'] == et]
-                return sub[sub['Type'] == 'Recette']['Montant'].sum() - sub[sub['Type'] == 'Dépense']['Montant'].sum()
-            s_sale, s_propre = calc(df_view, 'Sale'), calc(df_view, 'Propre')
-            c1, c2, c3 = st.columns(3)
-            c1.metric("SOLDE PROPRE", f"{s_propre:,.0f} $")
-            c2.metric("SOLDE SALE", f"{s_sale:,.0f} $")
-            c3.metric("TOTAL GLOBAL", f"{(s_propre+s_sale):,.0f} $")
-            st.dataframe(df_view.sort_index(ascending=False).head(20), use_container_width=True)
+                new_treso
