@@ -183,5 +183,3 @@ else:
                         c3.progress(min(float(nb_ventes)/300, 1.0), text=f"Ventes: {int(nb_ventes)}")
         except: pass
 
-    # --- PAGE : GESTION DES MEMBRES (ADMIN UNIQUEMENT) ---
-    elif choice == "Gestion des Membres":
