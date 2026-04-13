@@ -42,38 +42,8 @@ st.markdown(f"""
     """, unsafe_allow_html=True)
 
 # --- 3. CONNEXION ET FONCTIONS ---
-conn = st.connection("gsheets", type=GSheetsConnection)
-
-def log_invisible(action, details=""):
-    try:
-        ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-        df_r = conn.read(worksheet="Rapports", ttl=0)
-        new_log = pd.DataFrame([{
-            "Date": ts,
-            "Membre": st.session_state.get('user_pseudo', 'Système'),
-            "Action": f"[LOG] {action}",
-            "Drogue": "N/A", "Quantite": 0, "Butin": 0, "Note": details
-        }])
-        conn.update(worksheet="Rapports", data=pd.concat([df_r, new_log], ignore_index=True))
-    except: pass
-
-def get_members():
-    return conn.read(worksheet="Membres", ttl=0)
-
-if 'connected' not in st.session_state:
-    st.session_state['connected'] = False
-if "form_key" not in st.session_state:
-    st.session_state.form_key = 0
-
-def reset_form():
-    st.session_state.form_key += 1
-
 def check_login():
     df_m = get_members()
-    st.write("--- DEBUG ---")
-st.write("Colonnes détectées :", df_m.columns.tolist())
-st.write("Nombre de membres trouvés :", len(df_m))
-st.dataframe(df_m) # Affiche le tableau complet pour vérifier
     u = st.session_state.get("user_login")
     p = st.session_state.get("password_login")
     
@@ -89,7 +59,6 @@ st.dataframe(df_m) # Affiche le tableau complet pour vérifier
         log_invisible("Connexion", f"Login réussi pour {u}")
     else:
         st.error("Accès refusé.")
-
 # --- 4. AFFICHAGE ET NAVIGATION ---
 if not st.session_state['connected']:
     st.write("<br><br><br>", unsafe_allow_html=True)
