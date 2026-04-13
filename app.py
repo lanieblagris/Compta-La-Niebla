@@ -49,7 +49,6 @@ st.markdown(f"""
     <video autoplay loop muted playsinline id="bgVideo"><source src="{VIDEO_URL}" type="video/mp4"></video>
     """, unsafe_allow_html=True)
 
-    
 # --- 3. CONNEXION ET LOGS INVISIBLES ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
@@ -72,55 +71,4 @@ if 'connected' not in st.session_state:
 if "form_key" not in st.session_state:
     st.session_state.form_key = 0
 
-def reset_form():
-    st.session_state.form_key += 1
-
-def check_login():
-    u = st.session_state.get("user_login")
-    p = st.session_state.get("password_login")
-    if u in USERS and USERS[u]["password"] == p:
-        st.session_state['connected'] = True
-        st.session_state['user_role'] = u
-        st.session_state['user_pseudo'] = USERS[u]["pseudo"]
-        log_invisible("Connexion", f"Login réussi pour {u}")
-    else:
-        st.error("Accès refusé.")
-
-# --- 4. AFFICHAGE ET NAVIGATION ---
-if not st.session_state['connected']:
-    st.write("<br><br><br>", unsafe_allow_html=True)
-    st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
-    st.markdown('<div class="lore-quote">"Le Gris n\'est pas qu\'une couleur, c\'est une attitude."</div>', unsafe_allow_html=True)
-    _, mid, _ = st.columns([1, 1.2, 1])
-    with mid:
-        with st.form("login_form"):
-            st.text_input("NOM DE CODE", key="user_login")
-            st.text_input("MOT DE PASSE", type="password", key="password_login")
-            if st.form_submit_button("S'INFILTRER"):
-                check_login()
-                if st.session_state['connected']: st.rerun()
-else:
-    with st.sidebar:
-        st.write(f"### 🥷 {st.session_state['user_pseudo']}")
-        menu = ["Tableau de bord"]
-        if st.session_state['user_role'] == "Admin": 
-            menu.append("Comptabilité Globale")
-            menu.append("Archives de la Niebla")
-        choice = st.radio("Navigation", menu)
-        if st.button("Déconnexion"):
-            log_invisible("Déconnexion", "Session fermée")
-            st.session_state.clear()
-            st.rerun()
-
-    if choice == "Tableau de bord":
-        st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
-        LOGO_URL = "https://raw.githubusercontent.com/lanieblagris/Compta-La-Niebla/main/logo.png?v=4"
-        st.markdown(f'<div style="text-align:center;"><img src="{LOGO_URL}" style="width:100%; max-height:200px; object-fit:cover; border-radius:10px; margin-bottom:20px;"></div>', unsafe_allow_html=True)
-        
-        tabs = st.tabs(["💰 ATM", "🛒 Supérette", "🏎️ Go Fast", "🏠 Cambriolage", "🌿 Drogue"])
-
-        def handle_submit(action, butin=0, drogue="N/A", quantite=0):
-            try:
-                now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-                new_row_rep = pd.DataFrame([{"Date": now, "Membre": st.session_state['user_pseudo'], "Action": action, "Drogue": drogue, "Quantite": float(quantite), "Butin": float(butin)}])
-                new_row_treso = pd.DataFrame([{"Date": now, "Type": "Recette", "Etat": "Sale", "Catégorie": action, "Montant": float(butin), "Note": f"Rapport de {st.session_state
+def
