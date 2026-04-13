@@ -10,7 +10,6 @@ st.set_page_config(page_title="La Niebla - FlashBack FA", page_icon="🥷", layo
 
 DRUG_LIST = ["Marijuana", "Cocaine", "Meth", "Heroine", "Tranq", "Carte Prépayer", "B-magic", "Crack", "Autre"]
 
-# Dictionnaire des membres (Connexion sécurisée en local)
 USERS = {
     "Admin": {"password": "0000", "pseudo": "El Patron"},
     "Alex": {"password": "Alx220717", "pseudo": "Alex Smith"},
@@ -46,11 +45,10 @@ st.markdown(f"""
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def get_now():
-    """Retourne l'heure actuelle ajustée pour la France (UTC+2)"""
+    """Heure actuelle France (UTC+2)"""
     return (datetime.datetime.now() + timedelta(hours=2)).strftime("%Y-%m-%d %H:%M")
 
 def log_invisible(action, details=""):
-    """Enregistre une activité dans les rapports sans message visuel"""
     try:
         ts = get_now()
         df_r = conn.read(worksheet="Rapports", ttl=0)
@@ -72,7 +70,7 @@ def check_login():
     else:
         st.error("Identifiants incorrects.")
 
-# --- 4. INTERFACE PRINCIPALE ---
+# --- 4. INTERFACE ---
 if not st.session_state['connected']:
     st.write("<br><br><br>", unsafe_allow_html=True)
     st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
@@ -85,43 +83,38 @@ if not st.session_state['connected']:
                 check_login()
                 if st.session_state['connected']: st.rerun()
 else:
-    # --- SIDEBAR ---
+    # SIDEBAR
     with st.sidebar:
         st.write(f"### 🥷 {st.session_state['user_pseudo']}")
         menu = ["Tableau de bord"]
         if st.session_state['user_role'] == "Admin": 
             menu += ["Comptabilité Globale", "Archives de la Niebla"]
         choice = st.radio("Navigation", menu)
-        
         if st.button("Déconnexion"):
-            log_invisible("Déconnexion")
             st.session_state.clear()
             st.rerun()
 
-    # --- PAGE : TABLEAU DE BORD ---
     if choice == "Tableau de bord":
         st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
         
-        # NOUVEAU : Historique personnel (3 dernières actions)
+        # 1. MES 3 DERNIÈRES ACTIONS (POUR LE MEMBRE)
         st.write("### 🕒 Mes 3 dernières activités")
         try:
-            df_hist = conn.read(worksheet="Rapports", ttl=0)
-            if not df_hist.empty:
-                # Filtrer les actions du membre connecté (en ignorant les logs système)
-                ma_compta = df_hist[
-                    (df_hist['Membre'] == st.session_state['user_pseudo']) & 
-                    (~df_hist['Action'].str.contains(r'\[LOG\]', na=False))
-                ].tail(3).iloc[::-1] # Inverser pour avoir le plus récent en premier
-                
+            df_full = conn.read(worksheet="Rapports", ttl=0)
+            if not df_full.empty:
+                ma_compta = df_full[
+                    (df_full['Membre'] == st.session_state['user_pseudo']) & 
+                    (~df_full['Action'].str.contains(r'\[LOG\]', na=False))
+                ].tail(3).iloc[::-1]
                 if not ma_compta.empty:
                     st.table(ma_compta[['Date', 'Action', 'Butin']])
                 else:
-                    st.info("Aucune action enregistrée pour le moment.")
+                    st.info("Aucune action récente.")
         except: pass
 
         st.markdown("---")
         
-        # Système de saisie par onglets
+        # 2. ONGLETS DE SAISIE
         tabs = st.tabs(["💰 ATM", "🛒 Supérette", "🏎️ Go Fast", "🏠 Cambriolage", "🌿 Drogue"])
 
         def handle_submit(action, butin=0, drogue="N/A", quantite=0):
@@ -129,82 +122,17 @@ else:
                 ts = get_now()
                 df_rep = conn.read(worksheet="Rapports", ttl=0)
                 df_treso = conn.read(worksheet="Tresorerie", ttl=0)
-                
                 new_rep = pd.DataFrame([{"Date": ts, "Membre": st.session_state['user_pseudo'], "Action": action, "Drogue": drogue, "Quantite": float(quantite), "Butin": float(butin)}])
                 new_treso = pd.DataFrame([{"Date": ts, "Type": "Recette", "Etat": "Sale", "Catégorie": action, "Montant": float(butin), "Note": f"Rapport de {st.session_state['user_pseudo']}"}])
-                
                 conn.update(worksheet="Rapports", data=pd.concat([df_rep, new_rep], ignore_index=True))
                 conn.update(worksheet="Tresorerie", data=pd.concat([df_treso, new_treso], ignore_index=True))
-                
-                st.success("Données transmises !"); time.sleep(1)
-                st.session_state.form_key += 1
-                st.rerun()
-            except Exception as e: st.error(f"Erreur de transmission : {e}")
+                st.success("Transmis !"); time.sleep(1); st.session_state.form_key += 1; st.rerun()
+            except Exception as e: st.error(f"Erreur : {e}")
 
-        # Contenu des onglets
         with tabs[0]:
             with st.form(key=f"atm_{st.session_state.form_key}"):
-                b = st.number_input("💵 Butin ATM ($)", min_value=0)
+                b = st.number_input("Butin ATM ($)", min_value=0)
                 if st.form_submit_button("VALIDER"): handle_submit("ATM", butin=b)
         with tabs[1]:
             with st.form(key=f"sup_{st.session_state.form_key}"):
-                b = st.number_input("🛒 Butin Supérette ($)", min_value=0)
-                if st.form_submit_button("VALIDER"): handle_submit("Supérette", butin=b)
-        with tabs[2]:
-            with st.form(key=f"gf_{st.session_state.form_key}"):
-                b = st.number_input("🏎️ Butin Go Fast ($)", min_value=0)
-                if st.form_submit_button("VALIDER"): handle_submit("Go Fast", butin=b)
-        with tabs[3]:
-            with st.form(key=f"cam_{st.session_state.form_key}"):
-                st.write("Enregistrer un cambriolage terminé.")
-                if st.form_submit_button("VALIDER"): handle_submit("Cambriolage")
-        with tabs[4]:
-            with st.form(key=f"dr_{st.session_state.form_key}"):
-                d_select = st.selectbox("🌿 Produit", DRUG_LIST)
-                q = st.number_input("📦 Quantité", min_value=0.0)
-                b = st.number_input("💵 Prix total ($)", min_value=0)
-                if st.form_submit_button("VALIDER VENTE"): handle_submit("Drogue", butin=b, drogue=d_select, quantite=-abs(q))
-
-        # Stats hebdomadaires (Admin ou Global)
-        st.markdown("---")
-        st.write("### 📊 STATS DE LA SEMAINE")
-        try:
-            df_stats = conn.read(worksheet="Rapports", ttl=0)
-            if not df_stats.empty:
-                df_stats['Date'] = pd.to_datetime(df_stats['Date'], errors='coerce')
-                start_week = (datetime.datetime.now() - datetime.timedelta(days=datetime.datetime.now().weekday())).replace(hour=0, minute=0, second=0)
-                week_data = df_stats[(df_stats['Date'] >= start_week) & (~df_stats['Action'].str.contains(r'\[LOG\]', na=False))].copy()
-                
-                if not week_data.empty:
-                    # Tableau récapitulatif par membre et action
-                    pivot = week_data.groupby(['Membre', 'Action']).size().unstack(fill_value=0)
-                    st.dataframe(pivot, use_container_width=True)
-                else:
-                    st.info("Aucune activité cette semaine.")
-        except: pass
-
-    # --- PAGE : ARCHIVES ---
-    elif choice == "Archives de la Niebla":
-        st.markdown('<div class="gta-title">Archives</div>', unsafe_allow_html=True)
-        try:
-            df_arc = conn.read(worksheet="Rapports", ttl=0)
-            st.dataframe(df_arc.sort_index(ascending=False), use_container_width=True)
-        except: st.error("Erreur de lecture des archives.")
-
-    # --- PAGE : COMPTABILITÉ ---
-    elif choice == "Comptabilité Globale":
-        st.markdown('<div class="gta-title">Tresorerie</div>', unsafe_allow_html=True)
-        # Ajoute tes outils de gestion de trésorerie ici
-        try:
-            df_view = conn.read(worksheet="Tresorerie", ttl=0)
-            if not df_view.empty:
-                def calc(df, et):
-                    sub = df[df['Etat'] == et]
-                    return sub[sub['Type'] == 'Recette']['Montant'].sum() - sub[sub['Type'] == 'Dépense']['Montant'].sum()
-                s_sale, s_propre = calc(df_view, 'Sale'), calc(df_view, 'Propre')
-                c1, c2, c3 = st.columns(3)
-                c1.metric("SOLDE PROPRE", f"{s_propre:,.0f} $")
-                c2.metric("SOLDE SALE", f"{s_sale:,.0f} $")
-                c3.metric("TOTAL GLOBAL", f"{(s_propre+s_sale):,.0f} $")
-                st.dataframe(df_view.sort_index(ascending=False).head(20), use_container_width=True)
-        except: pass
+                b = st.number_input("Butin
