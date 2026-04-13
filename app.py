@@ -35,8 +35,6 @@ st.markdown(f"""
     .stForm {{ background-color: rgba(10, 10, 10, 0.85) !important; border: 1px solid #444 !important; border-radius: 10px; }}
     h1, h2, h3, h4, p, label, .stMarkdown, [data-testid="stWidgetLabel"] {{ color: white !important; font-family: 'Courier New', monospace; }}
     [data-testid="stSidebar"] {{ background-color: rgba(0, 0, 0, 0.9) !important; }}
-    [data-testid="stMetricValue"] {{ color: white !important; }}
-    [data-testid="stMetricLabel"] {{ color: #bbb !important; }}
     </style>
     <video autoplay loop muted playsinline id="bgVideo"><source src="{VIDEO_URL}" type="video/mp4"></video>
     """, unsafe_allow_html=True)
@@ -45,6 +43,7 @@ st.markdown(f"""
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def get_now():
+    # Heure France UTC+2
     return (datetime.datetime.now() + timedelta(hours=2)).strftime("%Y-%m-%d %H:%M")
 
 def log_invisible(action, details=""):
@@ -107,7 +106,8 @@ else:
                 conn.update(worksheet="Rapports", data=pd.concat([df_rep, new_rep], ignore_index=True))
                 conn.update(worksheet="Tresorerie", data=pd.concat([df_treso, new_treso], ignore_index=True))
                 st.success("Transmis !"); time.sleep(1); st.session_state.form_key += 1; st.rerun()
-            except Exception as e: st.error(f"Erreur : {e}")
+            except Exception as e: 
+                st.error(f"Erreur : {e}")
 
         with tabs[0]:
             with st.form(key=f"atm_{st.session_state.form_key}"):
@@ -157,7 +157,7 @@ else:
 
         st.markdown("---")
 
-        # --- C. MES 3 DERNIÈRES ACTIONS (DÉPLACÉ ICI) ---
+        # --- C. MES 3 DERNIÈRES ACTIONS (BUTIN CORRIGÉ) ---
         st.write("### 🕒 Mes 3 dernières activités")
         try:
             if not df_full.empty:
@@ -167,7 +167,7 @@ else:
                 ].tail(3).iloc[::-1].copy()
                 
                 if not ma_compta.empty:
-                    # Formatage propre du butin
+                    # Formatage propre du butin : 3000 -> 3 000 $
                     ma_compta['Butin'] = ma_compta['Butin'].apply(lambda x: f"{int(x):,} $".replace(',', ' '))
                     st.table(ma_compta[['Date', 'Action', 'Butin']])
                 else: st.info("Aucune action récente.")
@@ -180,4 +180,14 @@ else:
 
     elif choice == "Comptabilité Globale":
         st.markdown('<div class="gta-title">Tresorerie</div>', unsafe_allow_html=True)
-        # Logique compta...
+        df_view = conn.read(worksheet="Tresorerie", ttl=0)
+        if not df_view.empty:
+            def calc(df, et):
+                sub = df[df['Etat'] == et]
+                return sub[sub['Type'] == 'Recette']['Montant'].sum() - sub[sub['Type'] == 'Dépense']['Montant'].sum()
+            s_sale, s_propre = calc(df_view, 'Sale'), calc(df_view, 'Propre')
+            c1, c2, c3 = st.columns(3)
+            c1.metric("SOLDE PROPRE", f"{s_propre:,.0f} $")
+            c2.metric("SOLDE SALE", f"{s_sale:,.0f} $")
+            c3.metric("TOTAL GLOBAL", f"{(s_propre+s_sale):,.0f} $")
+            st.dataframe(df_view.sort_index(ascending=False).head(20), use_container_width=True)
