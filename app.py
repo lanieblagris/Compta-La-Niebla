@@ -194,4 +194,59 @@ else:
                     try:
                         df_c = conn.read(worksheet="Tresorerie", ttl=0)
                         new_o = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Type": typ, "Etat": et, "Catégorie": "Manuel", "Montant": float(mnt), "Note": cat}])
-                        conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_o
+                        conn.update(worksheet="Tresorerie", data=pd.concat([df_c, new_o], ignore_index=True))
+                        st.success("OK !"); time.sleep(1); st.rerun()
+                    except: st.error("Erreur Sheets.")
+
+        with t2:
+            with st.form("blanchiment"):
+                st.write("#### Blanchiment")
+                m_s = st.number_input("Montant sale ($)", min_value=0)
+                tx = st.slider("Taux (%)", 0, 100, 20)
+                if st.form_submit_button("Lancer le lavage"):
+                    try:
+                        p_net = m_s * (1 - tx/100)
+                        df_t = conn.read(worksheet="Tresorerie", ttl=0)
+                        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+                        lignes = pd.DataFrame([
+                            {"Date": now, "Type": "Dépense", "Etat": "Sale", "Catégorie": "Lavage", "Montant": float(m_s), "Note": "Sortie sale"},
+                            {"Date": now, "Type": "Recette", "Etat": "Propre", "Catégorie": "Lavage", "Montant": float(p_net), "Note": f"Retour propre (-{tx}%)"}
+                        ])
+                        conn.update(worksheet="Tresorerie", data=pd.concat([df_t, lignes], ignore_index=True))
+                        st.success("Blanchi !"); time.sleep(1); st.rerun()
+                    except: st.error("Erreur.")
+
+        with t3:
+            with st.form("stock"):
+                st.write("#### Entrée de Stock")
+                prod = st.selectbox("Produit", DRUG_LIST)
+                qty = st.number_input("Quantité", min_value=0.0)
+                if st.form_submit_button("Ajouter au stock"):
+                    try:
+                        df_r = conn.read(worksheet="Rapports", ttl=0)
+                        new_s = pd.DataFrame([{"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Membre": "LA NIEBLA", "Action": "Drogue", "Drogue": prod, "Quantite": float(qty), "Butin": 0}])
+                        conn.update(worksheet="Rapports", data=pd.concat([df_r, new_s], ignore_index=True))
+                        st.success("Stock mis à jour !"); time.sleep(1); st.rerun()
+                    except: st.error("Erreur.")
+
+        try:
+            df_v = conn.read(worksheet="Tresorerie", ttl=0)
+            if not df_v.empty:
+                st.markdown("---")
+                def solde(df, e):
+                    sub = df[df['Etat'] == e]
+                    return sub[sub['Type'] == 'Recette']['Montant'].sum() - sub[sub['Type'] == 'Dépense']['Montant'].sum()
+                s_p, s_s = solde(df_v, 'Propre'), solde(df_v, 'Sale')
+                c1, c2, c3 = st.columns(3)
+                c1.metric("SOLDE PROPRE", f"{s_p:,.0f} $")
+                c2.metric("SOLDE SALE", f"{s_s:,.0f} $")
+                c3.metric("TOTAL", f"{(s_p+s_s):,.0f} $")
+        except: pass
+
+    # --- PAGE : ARCHIVES (ADMIN) ---
+    elif choice == "Archives de la Niebla":
+        st.markdown('<div class="gta-title">Archives</div>', unsafe_allow_html=True)
+        try:
+            df_arc = conn.read(worksheet="Rapports", ttl=0)
+            st.dataframe(df_arc.sort_index(ascending=False), use_container_width=True)
+        except: st.error("Erreur lecture archives.")
