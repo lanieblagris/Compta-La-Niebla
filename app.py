@@ -11,10 +11,10 @@ st.set_page_config(page_title="La Niebla - Luxury Cartel", page_icon="⚜️", l
 # Roles: 1: El Patron, 2: Lieutenant, 3: Sicario
 USERS = {
     "Admin": {"password": "0000", "pseudo": "El Patron", "role_level": 1},
-    "Alex": {"password": "Alx220717", "pseudo": "Alex Smith", "role_level": 1},
-    "Dany": {"password": "081219", "pseudo": "Dany Smith", "role_level": 1},
-    "Aziz": {"password": "asmith", "pseudo": "Aziz Smith", "role_level": 1},
-    "Alain": {"password": "999cww59", "pseudo": "Alain Bourdin", "role_level": 1},
+    "Alex": {"password": "Alx220717", "pseudo": "Alex Smith", "role_level": 3},
+    "Dany": {"password": "081219", "pseudo": "Dany Smith", "role_level": 2},
+    "Aziz": {"password": "asmith", "pseudo": "Aziz Smith", "role_level": 3},
+    "Alain": {"password": "999cww59", "pseudo": "Alain Bourdin", "role_level": 3},
 }
 
 DRUG_LIST = ["Marijuana", "Cocaine", "Meth", "Heroine", "Tranq", "Carte Prépayer", "B-magic", "Crack", "Autre"]
