@@ -42,21 +42,92 @@ USERS = {
 VIDEO_URL = "https://assets.mixkit.co/videos/preview/mixkit-mysterious-pale-fog-moving-slowly-over-the-ground-44130-large.mp4"
 
 st.markdown(f"""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap');
-    .stApp {{ background: transparent !important; }}
-    body {{ background-color: #000000; }}
-    .gta-title {{
-        font-family: 'UnifrakturMaguntia', cursive; font-size: 85px; color: white;
-        text-align: center; text-shadow: 5px 5px 15px #000, 0 0 25px #555;
-        margin-top: -60px; margin-bottom: 0px; letter-spacing: 3px;
-    }}
-    .stForm {{ background-color: rgba(10, 10, 10, 0.85) !important; border: 1px solid #444 !important; border-radius: 10px; }}
-    h1, h2, h3, h4, p, label, .stMarkdown, [data-testid="stWidgetLabel"] {{ color: white !important; font-family: 'Courier New', monospace; }}
-    [data-testid="stSidebar"] {{ background-color: rgba(0, 0, 0, 0.9) !important; }}
-    </style>
-    <video autoplay loop muted playsinline id="bgVideo"><source src="{VIDEO_URL}" type="video/mp4"></video>
-    """, unsafe_allow_html=True)
+<style>
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+/* FOND */
+.stApp {{
+    background: transparent !important;
+}}
+
+body {{
+    background-color: #0A0A0A;
+    color: #EAEAEA;
+    font-family: 'Orbitron', sans-serif;
+}}
+
+/* TITRE */
+.gta-title {{
+    font-size: 80px;
+    text-align: center;
+    color: #C9A85D;
+    text-shadow: 0px 0px 25px rgba(201,168,93,0.6);
+    margin-top: -60px;
+    letter-spacing: 3px;
+}}
+
+/* SIDEBAR */
+[data-testid="stSidebar"] {{
+    background-color: rgba(10,10,10,0.95) !important;
+    border-right: 1px solid #222;
+}}
+
+/* CARDS */
+.card {{
+    background: rgba(20,20,20,0.85);
+    border: 1px solid #222;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 15px;
+    box-shadow: 0px 0px 15px rgba(0,0,0,0.7);
+}}
+
+/* KPI */
+.kpi {{
+    font-size: 24px;
+    font-weight: bold;
+    color: #C9A85D;
+}}
+
+/* TEXTE FAIBLE */
+.small {{
+    font-size: 12px;
+    color: #888;
+}}
+
+/* BOUTONS */
+.stButton>button {{
+    border-radius: 10px;
+    border: 1px solid #C9A85D;
+    background-color: transparent;
+    color: #C9A85D;
+    width: 100%;
+}}
+
+.stButton>button:hover {{
+    background-color: #C9A85D;
+    color: black;
+}}
+
+/* PROGRESS BAR */
+div[data-testid="stProgressBar"] > div > div {{
+    background-color: #C9A85D;
+}}
+
+/* FORMULAIRES */
+.stForm {{
+    background-color: rgba(15,15,15,0.9) !important;
+    border-radius: 15px;
+    border: 1px solid #222;
+}}
+
+</style>
+
+<video autoplay loop muted playsinline id="bgVideo">
+    <source src="{VIDEO_URL}" type="video/mp4">
+</video>
+""", unsafe_allow_html=True)
 
 # --- 3. FONCTIONS SYSTÈME ---
 conn = st.connection("gsheets", type=GSheetsConnection)
