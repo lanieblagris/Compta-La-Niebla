@@ -5,7 +5,7 @@ import datetime
 from datetime import timedelta
 import time
 
-# --- 1. CONFIGURATION ET ROLES ---
+# --- 1. CONFIGURATION DE LA PAGE ---
 st.set_page_config(
     page_title="La Niebla - Luxury Cartel",
     page_icon="⚜️",
@@ -13,6 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# --- 2. BASE DE DONNÉES UTILISATEURS & RÔLES ---
 # Roles: 1: Gérant (⚜️), 2: Lieutenant (⭐), 3: Soldat (🔫)
 USERS = {
     "Admin": {"password": "0000", "pseudo": "El Patron", "role_level": 1},
@@ -24,252 +25,248 @@ USERS = {
 
 DRUG_LIST = ["Marijuana", "Cocaine", "Meth", "Heroine", "Tranq", "Carte Prépayer", "B-magic", "Crack", "Autre"]
 
-# --- 2. STYLE CSS AVANCÉ (LUXURY CARTEL) ---
-# Ce bloc CSS reproduit les textures et les couleurs de ton image d'exemple.
+# --- 3. STYLE CSS AVANCÉ (LUXURY CARTEL) ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&family=Marcellus&display=swap');
     
-    /* --- FOND ET ÉLÉMENTS GLOBAUX --- */
-    /* Cache l'interface Streamlit par défaut */
     .stApp {{
         background: url('https://w0.peakpx.com/wallpaper/70/463/wallpaper-dark-grey-textured-dark-grey-background-textured-background.jpg');
         background-size: cover;
         background-attachment: fixed;
     }}
-    header, [data-testid="stSidebarHeader"], [data-testid="stHeader"] {{ background: transparent !important; color: transparent !important; }}
     
-    /* Textes globaux en doré clair */
+    /* Header et Sidebar transparents */
+    header, [data-testid="stSidebarHeader"], [data-testid="stHeader"] {{ background: transparent !important; }}
+    
+    /* Titres et Textes en Or/Gris */
     h1, h2, h3, h4, p, label, .stMarkdown, [data-testid="stWidgetLabel"] {{
         color: #f7e0a3 !important;
         font-family: 'Marcellus', serif !important;
     }}
     
-    /* --- TITRE PRINCIPAL STYLE GOTHIQUE OR --- */
     .gta-title {{
         font-family: 'UnifrakturMaguntia', cursive;
-        font-size: 110px;
+        font-size: 100px;
         color: transparent;
         background-image: linear-gradient(to bottom, #f7e0a3, #b48c3e, #f7e0a3);
         -webkit-background-clip: text;
         background-clip: text;
         text-align: center;
-        text-shadow: 0px 4px 15px rgba(180, 140, 62, 0.6);
-        margin-top: -60px;
-        margin-bottom: 30px;
-        letter-spacing: 6px;
+        text-shadow: 0px 4px 15px rgba(180, 140, 62, 0.4);
+        margin-top: -50px;
+        margin-bottom: 10px;
+        letter-spacing: 5px;
     }}
     
-    /* Slogan Gris Argenté */
     .gta-slogan {{
         font-family: 'Marcellus', serif;
-        font-size: 22px;
+        font-size: 20px;
         color: #a6a6a6 !important;
         text-align: center;
-        margin-top: -30px;
         margin-bottom: 40px;
         font-style: italic;
     }}
 
-    /* --- FORMULAIRES STYLE NOBLE DORK --- */
-    /* Reproduit le fond noir/gris sombre et la bordure dorée fine */
+    /* Formulaires et Inputs */
     .stForm {{
-        background-color: rgba(10, 10, 10, 0.9) !important;
+        background-color: rgba(10, 10, 10, 0.85) !important;
         border: 1px solid #b48c3e !important;
         border-radius: 8px;
-        padding: 20px;
-        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
     }}
     
-    /* Style pour les champs d'entrée (inputs) */
-    .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div>div {{
+    .stTextInput>div>div>input, .stNumberInput>div>div>input {{
         background-color: #1a1a1a !important;
         color: #f7e0a3 !important;
         border: 1px solid #444 !important;
     }}
 
-    /* --- SIDEBAR STYLE CARTEL --- */
-    [data-testid="stSidebar"] {{
-        background-color: rgba(15, 15, 15, 0.95) !important;
-        border-right: 1px solid #b48c3e;
-    }}
-    [data-testid="stSidebar"] * {{ color: #f7e0a3 !important; }}
-    
-    /* --- BARRES DE PROGRESSION DORÉES --- */
+    /* Barre de progression Or */
     .stProgress > div > div > div > div {{
         background-image: linear-gradient(to right, #b48c3e, #f7e0a3) !important;
-        border-radius: 10px;
+    }}
+
+    /* Sidebar */
+    [data-testid="stSidebar"] {{
+        background-color: rgba(15, 15, 15, 0.98) !important;
+        border-right: 1px solid #b48c3e;
     }}
     
-    /* --- TABLEAU D'OBJECTIFS STYLE LISTE LUXE --- */
-    .objectif-pseudo {{ font-size: 1.3em; color: #f7e0a3; font-weight: bold; font-family: 'Marcellus', serif; }}
-    .objectif-cash {{ font-size: 1.3em; color: #ffffff; font-weight: bold; font-family: 'Courier New', monospace;}}
-    .objectif-icon {{ font-size: 1.2em; vertical-align: middle; margin-right: 5px; }}
-
-    /* --- MÉTRIQUES DE COMPTA ADMIN --- */
+    /* Metrics */
     [data-testid="stMetricValue"] {{
-        color: transparent;
-        background-image: linear-gradient(to bottom, #f7e0a3, #b48c3e);
-        -webkit-background-clip: text;
-        background-clip: text;
+        color: #f7e0a3 !important;
         font-family: 'Marcellus', serif;
-        font-size: 38px;
     }}
-    [data-testid="stMetricLabel"] {{ color: #a6a6a6 !important; font-size: 16px;}}
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. LOGIQUE DE CONNEXION ---
+# --- 4. INITIALISATION ET FONCTIONS ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def get_now():
     return (datetime.datetime.now() + timedelta(hours=2)).strftime("%Y-%m-%d %H:%M")
 
-if 'connected' not in st.session_state: st.session_state['connected'] = False
-if "form_key" not in st.session_state: st.session_state.form_key = 0
+if 'connected' not in st.session_state:
+    st.session_state['connected'] = False
 
-def check_login():
-    u = st.session_state.get("user_login")
-    p = st.session_state.get("password_login")
-    if u in USERS and USERS[u]["password"] == p:
-        st.session_state['connected'] = True
-        st.session_state['user_id'] = u
-        st.session_state['user_pseudo'] = USERS[u]["pseudo"]
-        st.session_state['role_level'] = USERS[u]["role_level"]
-    else: st.error("Accès refusé.")
-
-# --- 4. INTERFACE ---
+# --- 5. ÉCRAN DE CONNEXION ---
 if not st.session_state['connected']:
-    st.write("<br><br><br><br>", unsafe_allow_html=True)
+    st.write("<br><br><br>", unsafe_allow_html=True)
     st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
     st.markdown('<div class="gta-slogan">On ne nous voit pas... mais on est partout.</div>', unsafe_allow_html=True)
     
-    _, mid, _ = st.columns([1, 1.3, 1])
+    _, mid, _ = st.columns([1, 1.2, 1])
     with mid:
         with st.form("login_form"):
-            st.write("### Identifiez-vous, Soldado")
-            st.text_input("NOM DE CODE", key="user_login")
-            st.text_input("MOT DE PASSE", type="password", key="password_login")
+            user_input = st.text_input("NOM DE CODE")
+            pass_input = st.text_input("MOT DE PASSE", type="password")
             if st.form_submit_button("S'INFILTRER"):
-                check_login()
-                if st.session_state['connected']: st.rerun()
+                if user_input in USERS and USERS[user_input]["password"] == pass_input:
+                    st.session_state['connected'] = True
+                    st.session_state['user_id'] = user_input
+                    st.session_state['user_pseudo'] = USERS[user_input]["pseudo"]
+                    st.session_state['role_level'] = USERS[user_input]["role_level"]
+                    st.rerun()
+                else:
+                    st.error("Accès refusé.")
+
+# --- 6. INTERFACE PRINCIPALE ---
 else:
-    # --- NAVIGATION BASÉE SUR LE RÔLE ---
+    # Récupération sécurisée des infos de session pour éviter KeyError
+    u_pseudo = st.session_state.get('user_pseudo', 'Soldado')
+    u_role_lv = st.session_state.get('role_level', 3)
+
+    # Sidebar Navigation
     with st.sidebar:
-        # Icônes basées sur ton exemple d'image
-        role_icon = "⚜️" if st.session_state['role_level'] == 1 else "⭐" if st.session_state['role_level'] == 2 else "🔫"
-        role_name = "El Patron" if st.session_state['role_level'] == 1 else "Lieutenant" if st.session_state['role_level'] == 2 else "Sicario"
+        if u_role_lv == 1: icon, r_name = "⚜️", "El Patron"
+        elif u_role_lv == 2: icon, r_name = "⭐", "Lieutenant"
+        else: icon, r_name = "🔫", "Sicario"
         
-        st.write(f"### {st.session_state['user_pseudo']} {role_icon}")
-        st.write(f"**Rang :** {role_name}")
+        st.write(f"### {u_pseudo} {icon}")
+        st.write(f"**Rang :** {r_name}")
         st.write("---")
         
         menu = ["Tableau de bord"]
-        if st.session_state['role_level'] <= 2:
+        if u_role_lv <= 2:
             menu += ["Comptabilité Globale", "Archives de la Niebla"]
             
-        choice = st.radio("Navigation", menu)
-        st.write("---")
-        if st.button("Déconnexion"):
+        choice = st.sidebar.radio("Navigation", menu)
+        
+        if st.sidebar.button("Se déconnecter"):
             st.session_state.clear()
             st.rerun()
 
-    # Lecture des données Rapports
+    # Lecture des données
     df_full = conn.read(worksheet="Rapports", ttl=0)
 
-    # --- ONGLET 1 : TABLEAU DE BORD ---
     if choice == "Tableau de bord":
         st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
         st.markdown('<div class="gta-slogan">On ne nous voit pas... mais on est partout.</div>', unsafe_allow_html=True)
         
-        # --- BLOCS SAISIE STYLE ONGLETS NOBLES ---
+        # --- SAISIE ACTIVITÉ ---
         tabs = st.tabs(["💰 ATM", "🛒 Supérette", "🏎️ Go Fast", "🏠 Cambriolage", "🌿 Drogue"])
 
-        def handle_submit(action, butin=0, drogue="N/A", quantite=0):
+        def submit_op(action, butin=0, drogue="N/A", qte=0):
             try:
                 ts = get_now()
-                # Mise à jour Rapports
+                # Enregistrement Rapport
                 df_rep = conn.read(worksheet="Rapports", ttl=0)
-                new_rep = pd.DataFrame([{"Date": ts, "Membre": st.session_state['user_pseudo'], "Action": action, "Drogue": drogue, "Quantite": float(quantite), "Butin": float(butin)}])
+                new_rep = pd.DataFrame([{"Date": ts, "Membre": u_pseudo, "Action": action, "Drogue": drogue, "Quantite": float(qte), "Butin": float(butin)}])
                 conn.update(worksheet="Rapports", data=pd.concat([df_rep, new_rep], ignore_index=True))
-                # Mise à jour Trésorerie
+                # Enregistrement Trésorerie
                 df_treso = conn.read(worksheet="Tresorerie", ttl=0)
-                new_treso = pd.DataFrame([{"Date": ts, "Type": "Recette", "Etat": "Sale", "Catégorie": action, "Montant": float(butin), "Note": f"Rapport {st.session_state['user_pseudo']}"}])
+                new_treso = pd.DataFrame([{"Date": ts, "Type": "Recette", "Etat": "Sale", "Catégorie": action, "Montant": float(butin), "Note": f"Par {u_pseudo}"}])
                 conn.update(worksheet="Tresorerie", data=pd.concat([df_treso, new_treso], ignore_index=True))
-                st.success("Opération transmise !"); time.sleep(1); st.session_state.form_key += 1; st.rerun()
-            except Exception as e: st.error(f"Erreur : {e}")
+                st.success("Opération archivée."); time.sleep(1); st.rerun()
+            except Exception as e: st.error(f"Erreur de transmission : {e}")
 
-        # Les formulaires de saisie restent identiques
         with tabs[0]:
-            with st.form(key=f"atm_{st.session_state.form_key}"):
+            with st.form("atm_f"):
                 b = st.number_input("Butin ATM ($)", min_value=0)
-                if st.form_submit_button("VALIDER"): handle_submit("ATM", butin=b)
-        # (Les autres formulaires Supérette, GF, GF, Drogue restent les mêmes)
+                if st.form_submit_button("VALIDER"): submit_op("ATM", butin=b)
+        with tabs[1]:
+            with st.form("sup_f"):
+                b = st.number_input("Butin Supérette ($)", min_value=0)
+                if st.form_submit_button("VALIDER"): submit_op("Supérette", butin=b)
+        with tabs[2]:
+            with st.form("gf_f"):
+                b = st.number_input("Butin Go Fast ($)", min_value=0)
+                if st.form_submit_button("VALIDER"): submit_op("Go Fast", butin=b)
+        with tabs[3]:
+            with st.form("cam_f"):
+                if st.form_submit_button("VALIDER CAMBRIOLAGE"): submit_op("Cambriolage")
+        with tabs[4]:
+            with st.form("drug_f"):
+                d = st.selectbox("Produit", DRUG_LIST)
+                q = st.number_input("Nombre d'unités", min_value=0.0)
+                b = st.number_input("Prix de vente total ($)", min_value=0)
+                if st.form_submit_button("VALIDER VENTE"): submit_op("Drogue", butin=b, drogue=d, qte=-abs(q))
 
         st.markdown("---")
 
-        # --- TABLEAU OBJECTIFS RÉINSÉRÉ ---
-        st.write("### 📊 Activité du groupe de la semaine")
+        # --- ÉTAT DE LA SEMAINE ---
+        st.write("### 📊 Activité du groupe (Cette semaine)")
         if not df_full.empty:
-            df_stats = df_full.copy()
-            df_stats['Date'] = pd.to_datetime(df_stats['Date'], dayfirst=True, errors='coerce')
+            df_full['Date'] = pd.to_datetime(df_full['Date'], dayfirst=True, errors='coerce')
             start_week = (datetime.datetime.now() - timedelta(days=datetime.datetime.now().weekday())).replace(hour=0, minute=0, second=0)
-            week_data = df_stats[df_stats['Date'] >= start_week]
+            week_data = df_full[df_full['Date'] >= start_week]
             
-            # Header stylisé comme dans ton image exemple
             st.markdown("""
-                <div style="display: flex; font-weight: bold; color: #a6a6a6; border-bottom: 2px solid #b48c3e; padding-bottom: 10px; margin-bottom: 15px; font-family: Marcellus, serif;">
-                    <div style="flex: 1.2;">SOLDAT</div><div style="flex: 1;">BUTIN ($)</div><div style="flex: 2;">ACTIONS (20)</div><div style="flex: 2;">VENTES (300)</div>
+                <div style="display: flex; font-weight: bold; color: #a6a6a6; border-bottom: 2px solid #b48c3e; padding-bottom: 10px; margin-bottom: 15px;">
+                    <div style="flex: 1.2;">NOM</div><div style="flex: 1;">ACTIONS ($)</div><div style="flex: 2;">OBJECTIF (20)</div><div style="flex: 2;">VENTES (300)</div>
                 </div>
             """, unsafe_allow_html=True)
 
-            for p_id, p_info in USERS.items():
-                ps = p_info["pseudo"]
-                lv = p_info["role_level"]
+            for u_id, info in USERS.items():
+                ps = info["pseudo"]
+                u_lv = info["role_level"]
                 u_data = week_data[week_data['Membre'] == ps]
-                cash = u_data[~u_data['Action'].str.contains("Drogue|Ventes", case=False, na=False)]['Butin'].sum()
-                act = int(len(u_data[(u_data['Action'] != "Drogue") & (~u_data['Action'].str.contains("Ajustement", na=False))]) + u_data[u_data['Action'] == "Ajustement Action"]["Quantite"].sum())
-                vnt = int(abs(u_data[u_data['Action'].str.contains("Drogue|Ventes", case=False, na=False)]['Quantite'].sum()))
                 
-                # Icônes de rôle
-                ico = "⚜️" if lv == 1 else "⭐" if lv == 2 else "🔫"
+                # Butin uniquement pour les actions (Hors Drogue/Ajustements Ventes)
+                cash = u_data[~u_data['Action'].str.contains("Drogue|Ventes", case=False, na=False)]['Butin'].sum()
+                
+                # Calcul des actions (Normales + Ajustements)
+                act_norm = len(u_data[(u_data['Action'] != "Drogue") & (~u_data['Action'].str.contains("Ajustement", na=False))])
+                act_adj = u_data[u_data['Action'] == "Ajustement Action"]["Quantite"].sum()
+                total_act = int(act_norm + act_adj)
+                
+                # Calcul des ventes
+                total_vnt = int(abs(u_data[u_data['Action'].str.contains("Drogue|Ventes", case=False, na=False)]['Quantite'].sum()))
+                
+                ic = "⚜️" if u_lv == 1 else "⭐" if u_lv == 2 else "🔫"
                 
                 c1, c2, c3, c4 = st.columns([1.2, 1, 2, 2])
-                c1.markdown(f'<div class="objectif-pseudo"><span class="objectif-icon">{ico}</span>{ps}</div>', unsafe_allow_html=True)
-                c2.markdown(f'<div class="objectif-cash">{int(cash):,} $</div>'.replace(',', ' '), unsafe_allow_html=True)
-                c3.progress(min(float(act)/20, 1.0), text=f"{act}/20 actions")
-                c4.progress(min(float(vnt)/300, 1.0), text=f"{vnt}/300 ventes")
+                c1.markdown(f'<div style="color:#f7e0a3; font-weight:bold;">{ic} {ps}</div>', unsafe_allow_html=True)
+                c2.markdown(f'<div style="color:#ffffff;">{int(cash):,} $</div>'.replace(',', ' '), unsafe_allow_html=True)
+                c3.progress(min(float(total_act)/20, 1.0), text=f"{total_act}/20")
+                c4.progress(min(float(total_vnt)/300, 1.0), text=f"{total_vnt}/300")
                 st.write("")
-        
+
         st.markdown("---")
-        # Restauration de tes 3 dernières activités
-        st.write("### 🕒 Derniers prospects & opérations de l'entité")
-        mes_actions = df_full[df_full['Membre'] == st.session_state['user_pseudo']].tail(3).iloc[::-1]
-        st.table(mes_actions[['Date', 'Action', 'Butin']])
+        st.write("### 🕒 Mes 3 dernières activités")
+        mes_actions = df_full[df_full['Membre'] == u_pseudo].tail(3).iloc[::-1]
+        if not mes_actions.empty:
+            st.table(mes_actions[['Date', 'Action', 'Butin']])
 
-    elif choice == "Archives de la Niebla" and st.session_state['role_level'] <= 2:
-        st.markdown('<div class="gta-title">Archives</div>', unsafe_allow_html=True)
-        # Tableau en style Cartel sombre
-        st.dataframe(df_full.sort_index(ascending=False), use_container_width=True)
-
-    # --- ONGLET 2 : COMPTA ADMIN ---
-    elif choice == "Comptabilité Globale" and st.session_state['role_level'] <= 2:
-        st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
-        st.markdown('<div class="gta-slogan">Trésorerie de l\'Entity</div>', unsafe_allow_html=True)
+    elif choice == "Comptabilité Globale" and u_role_lv <= 2:
+        st.markdown('<div class="gta-title">Trésorerie</div>', unsafe_allow_html=True)
         
         df_v = conn.read(worksheet="Tresorerie", ttl=0)
         if not df_v.empty:
-            def calc(df, et):
+            def calc_v(df, et):
                 sub = df[df['Etat'] == et]
                 return sub[sub['Type'] == 'Recette']['Montant'].sum() - sub[sub['Type'] == 'Dépense']['Montant'].sum()
-            sp, ss = calc(df_v, 'Propre'), calc(df_v, 'Sale')
             
-            # Métriques avec format Cartel dégradé or
+            p, s = calc_v(df_v, 'Propre'), calc_v(df_v, 'Sale')
             c1, c2, c3 = st.columns(3)
-            c1.metric("TRÉSOR PROPRE ⚜️", f"{int(sp):,} $".replace(',', ' '))
-            c2.metric("TRÉSOR SALE 💵", f"{int(ss):,} $".replace(',', ' '))
-            c3.metric("TOTAL DE L'ENTITY", f"{int(sp+ss):,} $".replace(',', ' '))
+            c1.metric("PROPRE ⚜️", f"{int(p):,} $".replace(',', ' '))
+            c2.metric("SALE 💵", f"{int(s):,} $".replace(',', ' '))
+            c3.metric("TOTAL", f"{int(p+s):,} $".replace(',', ' '))
+            
+            st.markdown("---")
+            st.write("### Historique des mouvements")
+            st.dataframe(df_v.sort_index(ascending=False), use_container_width=True)
 
-        st.markdown("---")
-        st.write("### Derniers flux financiers de l'Entity")
-        if not df_v.empty: st.dataframe(df_v.sort_index(ascending=False), use_container_width=True)
+    elif choice == "Archives de la Niebla" and u_role_lv <= 2:
+        st.markdown('<div class="gta-title">Archives</div>', unsafe_allow_html=True)
+        st.dataframe(df_full.sort_index(ascending=False), use_container_width=True)
