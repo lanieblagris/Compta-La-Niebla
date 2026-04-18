@@ -142,6 +142,13 @@ else:
                 c3.progress(min(float(act)/20, 1.0), text=f"{act}/20")
                 c4.progress(min(float(vnt)/300, 1.0), text=f"{vnt}/300")
 
+        st.markdown("### 🏆 Classement interne")
+
+revenus_par_joueur = revenus_par_joueur.sort_values(by="Butin", ascending=False)
+
+for i, row in revenus_par_joueur.iterrows():
+    st.write(f"{i+1}. {row['Membre']} — {int(row['Butin']):,} $".replace(",", " "))
+
         st.markdown("---")
         
         # --- MES 3 DERNIÈRES ACTIVITÉS ---
