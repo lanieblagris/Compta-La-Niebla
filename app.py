@@ -142,12 +142,40 @@ else:
                 c3.progress(min(float(act)/20, 1.0), text=f"{act}/20")
                 c4.progress(min(float(vnt)/300, 1.0), text=f"{vnt}/300")
 
-        st.markdown("### 🏆 Classement interne")
+        st.write("---")
+st.markdown("### 🏆 Top de la semaine (Revenus)")
 
-revenus_par_joueur = revenus_par_joueur.sort_values(by="Butin", ascending=False)
+# Calcul des revenus par membre sur la semaine en cours
+if not week_data.empty:
+    # On groupe par membre et on somme le Butin
+    classement = week_data.groupby("Membre")["Butin"].sum().reset_index()
+    classement = classement.sort_values(by="Butin", ascending=False)
 
-for i, row in revenus_par_joueur.iterrows():
-    st.write(f"{i+1}. {row['Membre']} — {int(row['Butin']):,} $".replace(",", " "))
+    for i, row in classement.iterrows():
+        # Récupération du rôle pour l'icône
+        pseudo = row['Membre']
+        # On cherche le niveau de rôle dans le dictionnaire USERS
+        # On fait une petite boucle pour trouver le bon membre par son pseudo
+        user_info = next((info for info in USERS.values() if info["pseudo"] == pseudo), None)
+        
+        if user_info:
+            lv = user_info["role_level"]
+            icon = "⚜️" if lv == 1 else "⭐" if lv == 2 else "🔫"
+        else:
+            icon = "👤"
+
+        # Affichage stylisé
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.markdown(f"**{i+1}. {icon} {pseudo}**")
+        with col2:
+            st.markdown(f"**{int(row['Butin']):,} $**".replace(",", " "))
+        
+        # Barre de progression décorative (optionnel, basé sur un record de 200k)
+        progression = min(float(row['Butin']) / 200000, 1.0)
+        st.progress(progression)
+else:
+    st.write("_Aucune donnée cette semaine_")
 
         st.markdown("---")
         
