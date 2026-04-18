@@ -5,6 +5,26 @@ import datetime
 from datetime import timedelta
 import time
 
+def calcul_paie(role, revenus):
+    if role in ["Admin"]:
+        return revenus * 0.40
+    return revenus * 0.25
+
+def grade_auto(revenus, actions):
+    if revenus > 150000 and actions > 20:
+        return "Bras droit"
+    elif revenus > 80000:
+        return "Sicario confirmé"
+    elif revenus > 30000:
+        return "Sicario"
+    else:
+        return "Prospecto"
+
+def statut_auto(actions):
+    if actions < 10:
+        return "⚠️ Sous pression"
+    return "✔️ Actif"
+
 # --- 1. CONFIGURATION ET CONSTANTES ---
 st.set_page_config(page_title="La Niebla - FlashBack FA", page_icon="🥷", layout="wide")
 
