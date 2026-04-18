@@ -31,9 +31,6 @@ st.markdown(f"""
     [data-testid="stSidebar"] {{ background-color: rgba(15, 15, 15, 0.98) !important; border-right: 1px solid #b48c3e; }}
     .stProgress > div > div > div > div {{ background-image: linear-gradient(to right, #b48c3e, #f7e0a3) !important; }}
     [data-testid="stMetricValue"] {{ color: #f7e0a3 !important; font-family: 'Marcellus', serif; font-size: 35px; }}
-    
-    /* Style spécifique pour le tableau des activités */
-    [data-testid="stTable"] {{ background-color: rgba(0,0,0,0.3); border-radius: 10px; }}
     th {{ color: #b48c3e !important; }}
     td {{ color: #ffffff !important; }}
     </style>
@@ -79,6 +76,7 @@ else:
 
     df_full = conn.read(worksheet="Rapports", ttl=0)
 
+    # --- TABLEAU DE BORD ---
     if choice == "Tableau de bord":
         st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
         
@@ -89,19 +87,38 @@ else:
             df_r = conn.read(worksheet="Rapports", ttl=0)
             new_r = pd.DataFrame([{"Date": ts, "Membre": u_pseudo, "Action": action, "Drogue": drogue, "Quantite": float(qte), "Butin": float(butin)}])
             conn.update(worksheet="Rapports", data=pd.concat([df_r, new_r], ignore_index=True))
+            
             df_t = conn.read(worksheet="Tresorerie", ttl=0)
             new_t = pd.DataFrame([{"Date": ts, "Type": "Recette", "Etat": "Sale", "Catégorie": action, "Montant": float(butin), "Note": f"Par {u_pseudo}"}])
             conn.update(worksheet="Tresorerie", data=pd.concat([df_t, new_t], ignore_index=True))
             st.success("Transmis !"); time.sleep(1); st.rerun()
 
         with tabs[0]:
-            with st.form("atm"):
+            with st.form("atm_f"):
                 b = st.number_input("Butin ATM ($)", min_value=0)
-                if st.form_submit_button("VALIDER"): submit_op("ATM", butin=b)
+                if st.form_submit_button("VALIDER ATM"): submit_op("ATM", butin=b)
+        
+        with tabs[1]:
+            with st.form("sup_f"):
+                b = st.number_input("Butin Supérette ($)", min_value=0)
+                if st.form_submit_button("VALIDER SUPÉRETTE"): submit_op("Supérette", butin=b)
+        
+        with tabs[2]:
+            with st.form("gf_f"):
+                b = st.number_input("Butin Go Fast ($)", min_value=0)
+                if st.form_submit_button("VALIDER GO FAST"): submit_op("Go Fast", butin=b)
+        
+        with tabs[3]:
+            with st.form("cam_f"):
+                st.write("Confirmer le cambriolage effectué ?")
+                if st.form_submit_button("VALIDER CAMBRIOLAGE"): submit_op("Cambriolage")
+        
         with tabs[4]:
-            with st.form("drug"):
-                d = st.selectbox("Produit", DRUG_LIST); q = st.number_input("Unités", min_value=0.0); b = st.number_input("Prix total ($)", min_value=0)
-                if st.form_submit_button("VALIDER VENTE"): submit_op("Drogue", butin=b, drogue=d, qte=-abs(q))
+            with st.form("drug_f"):
+                d = st.selectbox("Produit", DRUG_LIST)
+                q = st.number_input("Unités vendues", min_value=0.0)
+                b = st.number_input("Prix de vente total ($)", min_value=0)
+                if st.form_submit_button("VALIDER VENTE DROGUE"): submit_op("Drogue", butin=b, drogue=d, qte=-abs(q))
 
         st.markdown("---")
 
@@ -127,15 +144,12 @@ else:
 
         st.markdown("---")
         
-        # --- MES 3 DERNIÈRES ACTIVITÉS (CORRIGÉES ICI) ---
+        # --- MES 3 DERNIÈRES ACTIVITÉS ---
         st.write("### 🕒 Mes 3 dernières activités")
         mes_actions = df_full[df_full['Membre'] == u_pseudo].tail(3).iloc[::-1].copy()
         
         if not mes_actions.empty:
-            # ICI : On formate le montant pour qu'il soit beau (ex: 10 120 $)
             mes_actions['Butin'] = mes_actions['Butin'].apply(lambda x: f"{int(float(x)):,} $".replace(',', ' '))
-            
-            # Affichage du tableau sans l'index moche à gauche
             st.table(mes_actions[['Date', 'Action', 'Butin']])
 
     # --- COMPTABILITÉ GLOBALE ---
@@ -152,11 +166,11 @@ else:
             c2.metric("SALE 💵", f"{int(s):,} $".replace(',', ' '))
             c3.metric("TOTAL Coffre", f"{int(p+s):,} $".replace(',', ' '))
 
-        st.write("---")
         if u_role_lv == 1:
+            st.write("---")
             col_a, col_b = st.columns(2)
             with col_a:
-                with st.expander("🛠️ AJOUTER ACTIONS/VENTES"):
+                with st.expander("🛠️ AJUSTEMENT OBJECTIFS"):
                     with st.form("adj_obj"):
                         target = st.selectbox("Membre", [u["pseudo"] for u in USERS.values()])
                         type_adj = st.radio("Type", ["Actions", "Ventes"])
@@ -166,23 +180,23 @@ else:
                             df_r = conn.read(worksheet="Rapports", ttl=0)
                             new_l = pd.DataFrame([{"Date": get_now(), "Membre": target, "Action": f"Ajustement {type_adj}", "Drogue": "N/A", "Quantite": q_save, "Butin": 0}])
                             conn.update(worksheet="Rapports", data=pd.concat([df_r, new_l], ignore_index=True))
-                            st.success("Fait !"); time.sleep(1); st.rerun()
+                            st.success("Objectif mis à jour !"); time.sleep(1); st.rerun()
             with col_b:
-                with st.expander("💰 AJOUTER/RETIRER ARGENT"):
+                with st.expander("💰 MOUVEMENT DE CAISSE"):
                     with st.form("adj_fin"):
                         t_m = st.selectbox("Type", ["Recette", "Dépense"])
                         e_m = st.selectbox("État", ["Sale", "Propre"])
                         v_m = st.number_input("Montant ($)", min_value=0)
                         cat = st.text_input("Raison")
-                        if st.form_submit_button("VALIDER"):
+                        if st.form_submit_button("VALIDER TRANSACTION"):
                             df_t = conn.read(worksheet="Tresorerie", ttl=0)
                             new_t = pd.DataFrame([{"Date": get_now(), "Type": t_m, "Etat": e_m, "Catégorie": cat, "Montant": float(v_m), "Note": f"Admin: {u_pseudo}"}])
                             conn.update(worksheet="Tresorerie", data=pd.concat([df_t, new_t], ignore_index=True))
-                            st.success("Trésor mis à jour !"); time.sleep(1); st.rerun()
+                            st.success("Caisse mise à jour !"); time.sleep(1); st.rerun()
 
         st.write("### Historique des flux financiers")
         st.dataframe(df_v.sort_index(ascending=False), use_container_width=True)
-        
+
     elif choice == "Archives de la Niebla":
         st.markdown('<div class="gta-title">Archives</div>', unsafe_allow_html=True)
         st.dataframe(df_full.sort_index(ascending=False), use_container_width=True)
