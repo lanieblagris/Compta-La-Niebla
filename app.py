@@ -11,10 +11,10 @@ st.set_page_config(page_title="La Niebla - Luxury Cartel", page_icon="⚜️", l
 # Roles: 1: El Patron, 2: Lieutenant, 3: Sicario
 USERS = {
     "Admin": {"password": "0000", "pseudo": "El Patron", "role_level": 1},
-    "Alex": {"password": "Alx220717", "pseudo": "Alex Smith", "role_level": 3},
-    "Dany": {"password": "081219", "pseudo": "Dany Smith", "role_level": 3},
-    "Aziz": {"password": "asmith", "pseudo": "Aziz Smith", "role_level": 3},
-    "Alain": {"password": "999cww59", "pseudo": "Alain Bourdin", "role_level": 3},
+    "Alex": {"password": "Alx220717", "pseudo": "Alex Smith", "role_level": 1},
+    "Dany": {"password": "081219", "pseudo": "Dany Smith", "role_level": 1},
+    "Aziz": {"password": "asmith", "pseudo": "Aziz Smith", "role_level": 1},
+    "Alain": {"password": "999cww59", "pseudo": "Alain Bourdin", "role_level": 1},
 }
 
 DRUG_LIST = ["Marijuana", "Cocaine", "Meth", "Heroine", "Tranq", "Carte Prépayer", "B-magic", "Crack", "Autre"]
@@ -73,7 +73,6 @@ else:
         st.write("---")
         if st.button("Se déconnecter"): st.session_state.clear(); st.rerun()
 
-    # Charger les rapports une fois pour toute la page
     df_full = conn.read(worksheet="Rapports", ttl=0)
 
     # --- TABLEAU DE BORD ---
@@ -85,11 +84,9 @@ else:
         
         def submit_op(action, butin=0, drogue="N/A", qte=0):
             ts = get_now()
-            # Ajout Rapport
             df_r = conn.read(worksheet="Rapports", ttl=0)
             new_r = pd.DataFrame([{"Date": ts, "Membre": u_pseudo, "Action": action, "Drogue": drogue, "Quantite": float(qte), "Butin": float(butin)}])
             conn.update(worksheet="Rapports", data=pd.concat([df_r, new_r], ignore_index=True))
-            # Ajout Trésorerie
             df_t = conn.read(worksheet="Tresorerie", ttl=0)
             new_t = pd.DataFrame([{"Date": ts, "Type": "Recette", "Etat": "Sale", "Catégorie": action, "Montant": float(butin), "Note": f"Par {u_pseudo}"}])
             conn.update(worksheet="Tresorerie", data=pd.concat([df_t, new_t], ignore_index=True))
@@ -112,12 +109,13 @@ else:
                 if st.form_submit_button("VALIDER CAMBRIOLAGE"): submit_op("Cambriolage")
         with tabs[4]:
             with st.form("drug"):
-                d = st.selectbox("Produit", DRUG_LIST); q = st.number_input("Unités", min_value=0.0); b = st.number_input("Prix total ($)", min_value=0)
+                d = st.selectbox("Produit", DRUG_LIST)
+                q = st.number_input("Unités", min_value=0.0)
+                b = st.number_input("Prix total ($)", min_value=0)
                 if st.form_submit_button("VALIDER VENTE"): submit_op("Drogue", butin=b, drogue=d, qte=-abs(q))
 
         st.markdown("---")
 
-        # --- RE-INSERTION OBJECTIFS ---
         st.write("### 📊 Objectifs de la Semaine")
         if not df_full.empty:
             df_stats = df_full.copy()
@@ -150,7 +148,6 @@ else:
                 st.write("")
 
         st.markdown("---")
-        # --- RE-INSERTION DERNIERES ACTIONS ---
         st.write("### 🕒 Mes 3 dernières activités")
         mes_actions = df_full[df_full['Membre'] == u_pseudo].tail(3).iloc[::-1]
         if not mes_actions.empty:
@@ -161,7 +158,9 @@ else:
         st.markdown('<div class="gta-title">Trésorerie</div>', unsafe_allow_html=True)
         df_v = conn.read(worksheet="Tresorerie", ttl=0)
         if not df_v.empty:
-            def c_v(df, e): return df[df['Etat']==e][df['Type']=='Recette']['Montant'].sum() - df[df['Etat']==e][df['Type']=='Dépense']['Montant'].sum()
+            def c_v(df, e):
+                sub = df[df['Etat'] == e]
+                return sub[sub['Type'] == 'Recette']['Montant'].sum() - sub[sub['Type'] == 'Dépense']['Montant'].sum()
             p, s = c_v(df_v, 'Propre'), c_v(df_v, 'Sale')
             c1, c2, c3 = st.columns(3)
             c1.metric("PROPRE ⚜️", f"{int(p):,} $".replace(',', ' '))
@@ -185,4 +184,20 @@ else:
                             st.success("Fait !"); time.sleep(1); st.rerun()
             with col_b:
                 with st.expander("💰 AJOUTER/RETIRER ARGENT"):
-                    with st.form
+                    with st.form("adj_fin"):
+                        t_m = st.selectbox("Type", ["Recette", "Dépense"])
+                        e_m = st.selectbox("État", ["Sale", "Propre"])
+                        v_m = st.number_input("Montant ($)", min_value=0)
+                        cat = st.text_input("Raison")
+                        if st.form_submit_button("VALIDER"):
+                            df_t = conn.read(worksheet="Tresorerie", ttl=0)
+                            new_t = pd.DataFrame([{"Date": get_now(), "Type": t_m, "Etat": e_m, "Catégorie": cat, "Montant": float(v_m), "Note": f"Admin: {u_pseudo}"}])
+                            conn.update(worksheet="Tresorerie", data=pd.concat([df_t, new_t], ignore_index=True))
+                            st.success("Trésor mis à jour !"); time.sleep(1); st.rerun()
+
+        st.write("### Historique des flux financiers")
+        st.dataframe(df_v.sort_index(ascending=False), use_container_width=True)
+
+    elif choice == "Archives de la Niebla":
+        st.markdown('<div class="gta-title">Archives</div>', unsafe_allow_html=True)
+        st.dataframe(df_full.sort_index(ascending=False), use_container_width=True)
