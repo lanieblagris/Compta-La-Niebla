@@ -8,13 +8,13 @@ import time
 # --- 1. CONFIGURATION ---
 st.set_page_config(page_title="La Niebla - Luxury Cartel", page_icon="⚜️", layout="wide")
 
-# Roles: 1: El Patron, 2: Lieutenant, 3: Sicario
+# Roles: 1: El Patron, 2: Lieutenant, 3: Sicario | is_drug_manager: True/False
 USERS = {
-    "Admin": {"password": "0000", "pseudo": "El Patron", "role_level": 1},
-    "Alex": {"password": "Alx220717", "pseudo": "Alex Smith", "role_level": 3},
-    "Dany": {"password": "081219", "pseudo": "Dany Smith", "role_level": 2},
-    "Aziz": {"password": "asmith", "pseudo": "Aziz Smith", "role_level": 3},
-    "Alain": {"password": "999cww59", "pseudo": "Alain Bourdin", "role_level": 3},
+    "Admin": {"password": "0000", "pseudo": "El Patron", "role_level": 1, "is_drug_manager": True},
+    "Alex": {"password": "Alx220717", "pseudo": "Alex Smith", "role_level": 1, "is_drug_manager": False},
+    "Dany": {"password": "081219", "pseudo": "Dany Smith", "role_level": 1, "is_drug_manager": True},
+    "Aziz": {"password": "asmith", "pseudo": "Aziz Smith", "role_level": 1, "is_drug_manager": False},
+    "Alain": {"password": "999cww59", "pseudo": "Alain Bourdin", "role_level": 1, "is_drug_manager": False},
 }
 
 DRUG_LIST = ["Marijuana", "Cocaine", "Meth", "Heroine", "Tranq", "Carte Prépayer", "B-magic", "Crack", "Autre"]
@@ -26,13 +26,10 @@ st.markdown(f"""
     .stApp {{ background: url('https://w0.peakpx.com/wallpaper/70/463/wallpaper-dark-grey-textured-dark-grey-background-textured-background.jpg'); background-size: cover; background-attachment: fixed; }}
     h1, h2, h3, h4, p, label, .stMarkdown, [data-testid="stWidgetLabel"] {{ color: #f7e0a3 !important; font-family: 'Marcellus', serif !important; }}
     .gta-title {{ font-family: 'UnifrakturMaguntia', cursive; font-size: 90px; color: transparent; background-image: linear-gradient(to bottom, #f7e0a3, #b48c3e, #f7e0a3); -webkit-background-clip: text; background-clip: text; text-align: center; margin-top: -50px; margin-bottom: 10px; }}
-    .gta-slogan {{ font-family: 'Marcellus', serif; font-size: 18px; color: #a6a6a6 !important; text-align: center; margin-bottom: 30px; font-style: italic; }}
     .stForm {{ background-color: rgba(10, 10, 10, 0.85) !important; border: 1px solid #b48c3e !important; border-radius: 8px; }}
     [data-testid="stSidebar"] {{ background-color: rgba(15, 15, 15, 0.98) !important; border-right: 1px solid #b48c3e; }}
     .stProgress > div > div > div > div {{ background-image: linear-gradient(to right, #b48c3e, #f7e0a3) !important; }}
-    [data-testid="stMetricValue"] {{ color: #f7e0a3 !important; font-family: 'Marcellus', serif; font-size: 35px; }}
-    th {{ color: #b48c3e !important; }}
-    td {{ color: #ffffff !important; }}
+    th {{ color: #b48c3e !important; }} td {{ color: #ffffff !important; }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -46,7 +43,6 @@ if 'connected' not in st.session_state: st.session_state['connected'] = False
 
 # --- 4. LOGIQUE CONNEXION ---
 if not st.session_state['connected']:
-    st.write("<br><br><br>", unsafe_allow_html=True)
     st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
     _, mid, _ = st.columns([1, 1.2, 1])
     with mid:
@@ -55,55 +51,68 @@ if not st.session_state['connected']:
             p_in = st.text_input("MOT DE PASSE", type="password")
             if st.form_submit_button("S'INFILTRER"):
                 if u_in in USERS and USERS[u_in]["password"] == p_in:
-                    st.session_state.update({"connected": True, "user_id": u_in, "user_pseudo": USERS[u_in]["pseudo"], "role_level": USERS[u_in]["role_level"]})
+                    u_data = USERS[u_in]
+                    st.session_state.update({"connected": True, "user_id": u_in, "user_pseudo": u_data["pseudo"], "role_level": u_data["role_level"], "is_drug_manager": u_data["is_drug_manager"]})
                     st.rerun()
                 else: st.error("Accès refusé.")
 else:
     u_pseudo = st.session_state['user_pseudo']
     u_role_lv = st.session_state['role_level']
+    is_drug_boss = st.session_state['is_drug_manager']
 
     with st.sidebar:
         icon = "⚜️" if u_role_lv == 1 else "⭐" if u_role_lv == 2 else "🔫"
-        r_name = "El Patron" if u_role_lv == 1 else "Lieutenant" if u_role_lv == 2 else "Sicario"
         st.write(f"### {u_pseudo} {icon}")
-        st.write(f"**Rang :** {r_name}")
+        if is_drug_boss: st.info("🌿 Responsable Drogue")
         st.write("---")
         menu = ["Tableau de bord"]
+        if u_role_lv <= 2 or is_drug_boss: menu += ["📦 Gestion des Stocks"]
         if u_role_lv <= 2: menu += ["Comptabilité Globale", "Archives de la Niebla"]
         choice = st.radio("Navigation", menu)
-        st.write("---")
         if st.button("Se déconnecter"): st.session_state.clear(); st.rerun()
 
+    # Lecture des données
     df_full = conn.read(worksheet="Rapports", ttl=0)
+    df_stock = conn.read(worksheet="Stocks", ttl=0)
 
     # --- TABLEAU DE BORD ---
     if choice == "Tableau de bord":
         st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
-        
         tabs = st.tabs(["💰 ATM", "🛒 Supérette", "🏎️ Go Fast", "🏠 Cambriolage", "🌿 Drogue"])
         
         def submit_op(action, butin=0, drogue="N/A", qte=0):
             ts = get_now()
+            # 1. Enregistrement Rapport
             df_r = conn.read(worksheet="Rapports", ttl=0)
             new_r = pd.DataFrame([{"Date": ts, "Membre": u_pseudo, "Action": action, "Drogue": drogue, "Quantite": float(qte), "Butin": float(butin)}])
             conn.update(worksheet="Rapports", data=pd.concat([df_r, new_r], ignore_index=True))
+            
+            # 2. Enregistrement Trésorerie
             df_t = conn.read(worksheet="Tresorerie", ttl=0)
             new_t = pd.DataFrame([{"Date": ts, "Type": "Recette", "Etat": "Sale", "Catégorie": action, "Montant": float(butin), "Note": f"Par {u_pseudo}"}])
             conn.update(worksheet="Tresorerie", data=pd.concat([df_t, new_t], ignore_index=True))
-            st.success("Transmis !"); time.sleep(1); st.rerun()
+
+            # 3. MISE À JOUR AUTOMATIQUE DU STOCK SI VENTE
+            if action == "Drogue" and drogue != "N/A":
+                dfs = conn.read(worksheet="Stocks", ttl=0)
+                if drogue in dfs['Produit'].values:
+                    dfs.loc[dfs['Produit'] == drogue, 'Quantite'] += float(qte) # qte est négatif ici
+                    conn.update(worksheet="Stocks", data=dfs)
+
+            st.success("Transmis ! Stock mis à jour."); time.sleep(1); st.rerun()
 
         with tabs[0]:
             with st.form("atm_f"):
                 b = st.number_input("Butin ATM ($)", min_value=0)
-                if st.form_submit_button("VALIDER ATM"): submit_op("ATM", butin=b)
+                if st.form_submit_button("VALIDER"): submit_op("ATM", butin=b)
         with tabs[1]:
             with st.form("sup_f"):
                 b = st.number_input("Butin Supérette ($)", min_value=0)
-                if st.form_submit_button("VALIDER SUPÉRETTE"): submit_op("Supérette", butin=b)
+                if st.form_submit_button("VALIDER"): submit_op("Supérette", butin=b)
         with tabs[2]:
             with st.form("gf_f"):
                 b = st.number_input("Butin Go Fast ($)", min_value=0)
-                if st.form_submit_button("VALIDER GO FAST"): submit_op("Go Fast", butin=b)
+                if st.form_submit_button("VALIDER"): submit_op("Go Fast", butin=b)
         with tabs[3]:
             with st.form("cam_f"):
                 if st.form_submit_button("VALIDER CAMBRIOLAGE"): submit_op("Cambriolage")
@@ -113,34 +122,13 @@ else:
                 if st.form_submit_button("VALIDER VENTE"): submit_op("Drogue", butin=b, drogue=d, qte=-abs(q))
 
         st.markdown("---")
-
-        # --- CLASSEMENT ET OBJECTIFS ---
+        # --- CLASSEMENT & OBJECTIFS ---
         if not df_full.empty:
             df_stats = df_full.copy()
             df_stats['Date'] = pd.to_datetime(df_stats['Date'], dayfirst=True, errors='coerce')
             start_week = (datetime.datetime.now() - timedelta(days=datetime.datetime.now().weekday())).replace(hour=0, minute=0, second=0)
             week_data = df_stats[df_stats['Date'] >= start_week]
 
-            st.write("### 📊 Objectifs de la Semaine")
-            st.markdown("""
-                <div style="display: flex; font-weight: bold; color: #a6a6a6; border-bottom: 2px solid #b48c3e; padding-bottom: 10px; margin-bottom: 15px;">
-                    <div style="flex: 1.2;">SOLDAT</div><div style="flex: 1;">BUTIN ($)</div><div style="flex: 2;">ACTIONS (20)</div><div style="flex: 2;">VENTES (300)</div>
-                </div>
-            """, unsafe_allow_html=True)
-
-            for u_id, info in USERS.items():
-                ps = info["pseudo"]; u_lv = info["role_level"]; u_data = week_data[week_data['Membre'] == ps]
-                cash = u_data[~u_data['Action'].str.contains("Drogue|Ventes", case=False, na=False)]['Butin'].sum()
-                act = int(len(u_data[(u_data['Action'] != "Drogue") & (~u_data['Action'].str.contains("Ajustement", na=False))]) + u_data[u_data['Action'] == "Ajustement Action"]["Quantite"].sum())
-                vnt = int(abs(u_data[u_data['Action'].str.contains("Drogue|Ventes", case=False, na=False)]['Quantite'].sum()))
-                
-                c1, c2, c3, c4 = st.columns([1.2, 1, 2, 2])
-                c1.markdown(f'<div style="color:#f7e0a3; font-weight:bold;">{ps}</div>', unsafe_allow_html=True)
-                c2.markdown(f'<div style="color:#ffffff;">{int(cash):,} $</div>'.replace(',', ' '), unsafe_allow_html=True)
-                c3.progress(min(float(act)/20, 1.0), text=f"{act}/20")
-                c4.progress(min(float(vnt)/300, 1.0), text=f"{vnt}/300")
-            
-            st.markdown("---")
             st.write("### 🏆 Classement interne (Revenus)")
             classement = week_data.groupby("Membre")["Butin"].sum().reset_index().sort_values(by="Butin", ascending=False)
             for i, row in classement.reset_index(drop=True).iterrows():
@@ -153,47 +141,33 @@ else:
             mes_actions['Butin'] = mes_actions['Butin'].apply(lambda x: f"{int(float(x)):,} $".replace(',', ' '))
             st.table(mes_actions[['Date', 'Action', 'Butin']])
 
-    # --- COMPTABILITÉ GLOBALE ---
+    # --- NOUVEL ONGLET : GESTION DES STOCKS ---
+    elif choice == "📦 Gestion des Stocks":
+        st.markdown('<div class="gta-title">Stocks</div>', unsafe_allow_html=True)
+        # Initialisation auto des produits si vides
+        for p in DRUG_LIST:
+            if p not in df_stock['Produit'].values:
+                df_stock = pd.concat([df_stock, pd.DataFrame([{"Produit": p, "Quantite": 0.0}])], ignore_index=True)
+        
+        c1, c2 = st.columns([1.5, 1])
+        with c1:
+            st.write("### Inventaire")
+            st.dataframe(df_stock, use_container_width=True, hide_index=True)
+        with c2:
+            st.write("### Ajustement (Récolte/Saisie)")
+            with st.form("stock_adj"):
+                p_sel = st.selectbox("Produit", DRUG_LIST)
+                m_sel = st.radio("Action", ["Ajout (+)", "Retrait (-)"])
+                q_sel = st.number_input("Quantité", min_value=0.0)
+                if st.form_submit_button("APPLIQUER"):
+                    val = q_sel if m_sel == "Ajout (+)" else -q_sel
+                    df_stock.loc[df_stock['Produit'] == p_sel, 'Quantite'] += val
+                    conn.update(worksheet="Stocks", data=df_stock)
+                    st.success("Fait !"); time.sleep(1); st.rerun()
+
     elif choice == "Comptabilité Globale":
         st.markdown('<div class="gta-title">Trésorerie</div>', unsafe_allow_html=True)
-        df_v = conn.read(worksheet="Tresorerie", ttl=0)
-        if not df_v.empty:
-            def c_v(df, e):
-                sub = df[df['Etat'] == e]
-                return sub[sub['Type'] == 'Recette']['Montant'].sum() - sub[sub['Type'] == 'Dépense']['Montant'].sum()
-            p, s = c_v(df_v, 'Propre'), c_v(df_v, 'Sale')
-            c1, c2, c3 = st.columns(3)
-            c1.metric("PROPRE ⚜️", f"{int(p):,} $".replace(',', ' '))
-            c2.metric("SALE 💵", f"{int(s):,} $".replace(',', ' '))
-            c3.metric("TOTAL Coffre", f"{int(p+s):,} $".replace(',', ' '))
-
-        if u_role_lv == 1:
-            st.write("---")
-            col_a, col_b = st.columns(2)
-            with col_a:
-                with st.expander("🛠️ AJUSTEMENT OBJECTIFS"):
-                    with st.form("adj_obj"):
-                        target = st.selectbox("Membre", [u["pseudo"] for u in USERS.values()])
-                        type_adj = st.radio("Type", ["Actions", "Ventes"])
-                        valeur = st.number_input("Valeur", min_value=1)
-                        if st.form_submit_button("APPLIQUER"):
-                            q_save = float(valeur) if type_adj == "Actions" else -float(valeur)
-                            df_r = conn.read(worksheet="Rapports", ttl=0)
-                            new_l = pd.DataFrame([{"Date": get_now(), "Membre": target, "Action": f"Ajustement {type_adj}", "Drogue": "N/A", "Quantite": q_save, "Butin": 0}])
-                            conn.update(worksheet="Rapports", data=pd.concat([df_r, new_l], ignore_index=True))
-                            st.success("Fait !"); time.sleep(1); st.rerun()
-            with col_b:
-                with st.expander("💰 MOUVEMENT DE CAISSE"):
-                    with st.form("adj_fin"):
-                        t_m = st.selectbox("Type", ["Recette", "Dépense"]); e_m = st.selectbox("État", ["Sale", "Propre"]); v_m = st.number_input("Montant ($)", min_value=0); cat = st.text_input("Raison")
-                        if st.form_submit_button("VALIDER"):
-                            df_t = conn.read(worksheet="Tresorerie", ttl=0)
-                            new_t = pd.DataFrame([{"Date": get_now(), "Type": t_m, "Etat": e_m, "Catégorie": cat, "Montant": float(v_m), "Note": f"Admin: {u_pseudo}"}])
-                            conn.update(worksheet="Tresorerie", data=pd.concat([df_t, new_t], ignore_index=True))
-                            st.success("Caisse mise à jour !"); time.sleep(1); st.rerun()
-
-        st.write("### Historique financier")
-        st.dataframe(df_v.sort_index(ascending=False), use_container_width=True)
+        # ... (Garde ton code compta ici)
 
     elif choice == "Archives de la Niebla":
         st.markdown('<div class="gta-title">Archives</div>', unsafe_allow_html=True)
