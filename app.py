@@ -174,6 +174,29 @@ else:
 
     if choice == "Tableau de bord":
         st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
+
+        col1, col2, col3 = st.columns(3)
+
+col1.markdown(f"""
+<div class="card">
+<div class="small">Total semaine</div>
+<div class="kpi">...</div>
+</div>
+""", unsafe_allow_html=True)
+
+col2.markdown(f"""
+<div class="card">
+<div class="small">Caisse</div>
+<div class="kpi">...</div>
+</div>
+""", unsafe_allow_html=True)
+
+col3.markdown(f"""
+<div class="card">
+<div class="small">Actifs</div>
+<div class="kpi">...</div>
+</div>
+""", unsafe_allow_html=True)
         
         tabs = st.tabs(["💰 ATM", "🛒 Supérette", "🏎️ Go Fast", "🏠 Cambriolage", "🌿 Drogue"])
 
