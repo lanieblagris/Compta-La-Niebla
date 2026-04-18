@@ -176,8 +176,6 @@ if not week_data.empty:
         st.progress(progression)
 else:
     st.write("_Aucune donnée cette semaine_")
-
-        st.markdown("---")
         
         # --- MES 3 DERNIÈRES ACTIVITÉS ---
         st.write("### 🕒 Mes 3 dernières activités")
