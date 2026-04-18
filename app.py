@@ -174,7 +174,9 @@ else:
 
     if choice == "Tableau de bord":
         st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
+         tabs = st.tabs(["💰 ATM", "🛒 Supérette", "🏎️ Go Fast", "🏠 Cambriolage", "🌿 Drogue"])
 
+         
         col1, col2, col3 = st.columns(3)
 
 col1.markdown(f"""
@@ -197,8 +199,6 @@ col3.markdown(f"""
 <div class="kpi">...</div>
 </div>
 """, unsafe_allow_html=True)
-        
-        tabs = st.tabs(["💰 ATM", "🛒 Supérette", "🏎️ Go Fast", "🏠 Cambriolage", "🌿 Drogue"])
 
         def handle_submit(action, butin=0, drogue="N/A", quantite=0):
             try:
