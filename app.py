@@ -138,25 +138,51 @@ else:
             # Affichage du tableau sans l'index moche à gauche
             st.table(mes_actions[['Date', 'Action', 'Butin']])
 
+    # --- COMPTABILITÉ GLOBALE ---
     elif choice == "Comptabilité Globale":
         st.markdown('<div class="gta-title">Trésorerie</div>', unsafe_allow_html=True)
         df_v = conn.read(worksheet="Tresorerie", ttl=0)
         if not df_v.empty:
-            def c_v(df, e): return df[df['Etat']==e][df['Type']=='Recette']['Montant'].sum() - df[df['Etat']==e][df['Type']=='Dépense']['Montant'].sum()
+            def c_v(df, e):
+                sub = df[df['Etat'] == e]
+                return sub[sub['Type'] == 'Recette']['Montant'].sum() - sub[sub['Type'] == 'Dépense']['Montant'].sum()
             p, s = c_v(df_v, 'Propre'), c_v(df_v, 'Sale')
             c1, c2, c3 = st.columns(3)
             c1.metric("PROPRE ⚜️", f"{int(p):,} $".replace(',', ' '))
             c2.metric("SALE 💵", f"{int(s):,} $".replace(',', ' '))
-            c3.metric("TOTAL", f"{int(p+s):,} $".replace(',', ' '))
+            c3.metric("TOTAL Coffre", f"{int(p+s):,} $".replace(',', ' '))
 
+        st.write("---")
         if u_role_lv == 1:
-            with st.expander("🛠️ ADMINISTRATION"):
-                # ... (Les formulaires d'ajustement restent les mêmes)
-                pass
+            col_a, col_b = st.columns(2)
+            with col_a:
+                with st.expander("🛠️ AJOUTER ACTIONS/VENTES"):
+                    with st.form("adj_obj"):
+                        target = st.selectbox("Membre", [u["pseudo"] for u in USERS.values()])
+                        type_adj = st.radio("Type", ["Actions", "Ventes"])
+                        valeur = st.number_input("Valeur", min_value=1)
+                        if st.form_submit_button("APPLIQUER"):
+                            q_save = float(valeur) if type_adj == "Actions" else -float(valeur)
+                            df_r = conn.read(worksheet="Rapports", ttl=0)
+                            new_l = pd.DataFrame([{"Date": get_now(), "Membre": target, "Action": f"Ajustement {type_adj}", "Drogue": "N/A", "Quantite": q_save, "Butin": 0}])
+                            conn.update(worksheet="Rapports", data=pd.concat([df_r, new_l], ignore_index=True))
+                            st.success("Fait !"); time.sleep(1); st.rerun()
+            with col_b:
+                with st.expander("💰 AJOUTER/RETIRER ARGENT"):
+                    with st.form("adj_fin"):
+                        t_m = st.selectbox("Type", ["Recette", "Dépense"])
+                        e_m = st.selectbox("État", ["Sale", "Propre"])
+                        v_m = st.number_input("Montant ($)", min_value=0)
+                        cat = st.text_input("Raison")
+                        if st.form_submit_button("VALIDER"):
+                            df_t = conn.read(worksheet="Tresorerie", ttl=0)
+                            new_t = pd.DataFrame([{"Date": get_now(), "Type": t_m, "Etat": e_m, "Catégorie": cat, "Montant": float(v_m), "Note": f"Admin: {u_pseudo}"}])
+                            conn.update(worksheet="Tresorerie", data=pd.concat([df_t, new_t], ignore_index=True))
+                            st.success("Trésor mis à jour !"); time.sleep(1); st.rerun()
 
-        st.write("### Historique complet")
+        st.write("### Historique des flux financiers")
         st.dataframe(df_v.sort_index(ascending=False), use_container_width=True)
-
+        
     elif choice == "Archives de la Niebla":
         st.markdown('<div class="gta-title">Archives</div>', unsafe_allow_html=True)
         st.dataframe(df_full.sort_index(ascending=False), use_container_width=True)
