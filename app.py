@@ -5,26 +5,6 @@ import datetime
 from datetime import timedelta
 import time
 
-def calcul_paie(role, revenus):
-    if role in ["Admin"]:
-        return revenus * 0.40
-    return revenus * 0.25
-
-def grade_auto(revenus, actions):
-    if revenus > 150000 and actions > 20:
-        return "Bras droit"
-    elif revenus > 80000:
-        return "Sicario confirmé"
-    elif revenus > 30000:
-        return "Sicario"
-    else:
-        return "Prospecto"
-
-def statut_auto(actions):
-    if actions < 10:
-        return "⚠️ Sous pression"
-    return "✔️ Actif"
-
 # --- 1. CONFIGURATION ET CONSTANTES ---
 st.set_page_config(page_title="La Niebla - FlashBack FA", page_icon="🥷", layout="wide")
 
@@ -42,92 +22,21 @@ USERS = {
 VIDEO_URL = "https://assets.mixkit.co/videos/preview/mixkit-mysterious-pale-fog-moving-slowly-over-the-ground-44130-large.mp4"
 
 st.markdown(f"""
-<style>
-
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
-
-/* FOND */
-.stApp {{
-    background: transparent !important;
-}}
-
-body {{
-    background-color: #0A0A0A;
-    color: #EAEAEA;
-    font-family: 'Orbitron', sans-serif;
-}}
-
-/* TITRE */
-.gta-title {{
-    font-size: 80px;
-    text-align: center;
-    color: #C9A85D;
-    text-shadow: 0px 0px 25px rgba(201,168,93,0.6);
-    margin-top: -60px;
-    letter-spacing: 3px;
-}}
-
-/* SIDEBAR */
-[data-testid="stSidebar"] {{
-    background-color: rgba(10,10,10,0.95) !important;
-    border-right: 1px solid #222;
-}}
-
-/* CARDS */
-.card {{
-    background: rgba(20,20,20,0.85);
-    border: 1px solid #222;
-    border-radius: 15px;
-    padding: 20px;
-    margin-bottom: 15px;
-    box-shadow: 0px 0px 15px rgba(0,0,0,0.7);
-}}
-
-/* KPI */
-.kpi {{
-    font-size: 24px;
-    font-weight: bold;
-    color: #C9A85D;
-}}
-
-/* TEXTE FAIBLE */
-.small {{
-    font-size: 12px;
-    color: #888;
-}}
-
-/* BOUTONS */
-.stButton>button {{
-    border-radius: 10px;
-    border: 1px solid #C9A85D;
-    background-color: transparent;
-    color: #C9A85D;
-    width: 100%;
-}}
-
-.stButton>button:hover {{
-    background-color: #C9A85D;
-    color: black;
-}}
-
-/* PROGRESS BAR */
-div[data-testid="stProgressBar"] > div > div {{
-    background-color: #C9A85D;
-}}
-
-/* FORMULAIRES */
-.stForm {{
-    background-color: rgba(15,15,15,0.9) !important;
-    border-radius: 15px;
-    border: 1px solid #222;
-}}
-
-</style>
-
-<video autoplay loop muted playsinline id="bgVideo">
-    <source src="{VIDEO_URL}" type="video/mp4">
-</video>
-""", unsafe_allow_html=True)
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap');
+    .stApp {{ background: transparent !important; }}
+    body {{ background-color: #000000; }}
+    .gta-title {{
+        font-family: 'UnifrakturMaguntia', cursive; font-size: 85px; color: white;
+        text-align: center; text-shadow: 5px 5px 15px #000, 0 0 25px #555;
+        margin-top: -60px; margin-bottom: 0px; letter-spacing: 3px;
+    }}
+    .stForm {{ background-color: rgba(10, 10, 10, 0.85) !important; border: 1px solid #444 !important; border-radius: 10px; }}
+    h1, h2, h3, h4, p, label, .stMarkdown, [data-testid="stWidgetLabel"] {{ color: white !important; font-family: 'Courier New', monospace; }}
+    [data-testid="stSidebar"] {{ background-color: rgba(0, 0, 0, 0.9) !important; }}
+    </style>
+    <video autoplay loop muted playsinline id="bgVideo"><source src="{VIDEO_URL}" type="video/mp4"></video>
+    """, unsafe_allow_html=True)
 
 # --- 3. FONCTIONS SYSTÈME ---
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -173,33 +82,9 @@ else:
     df_full = conn.read(worksheet="Rapports", ttl=0)
 
     if choice == "Tableau de bord":
-    st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
-
-    tabs = st.tabs(["💰 ATM", "🛒 Supérette", "🏎️ Go Fast", "🏠 Cambriolage", "🌿 Drogue"])
-
-         
-        col1, col2, col3 = st.columns(3)
-
-col1.markdown(f"""
-<div class="card">
-<div class="small">Total semaine</div>
-<div class="kpi">...</div>
-</div>
-""", unsafe_allow_html=True)
-
-col2.markdown(f"""
-<div class="card">
-<div class="small">Caisse</div>
-<div class="kpi">...</div>
-</div>
-""", unsafe_allow_html=True)
-
-col3.markdown(f"""
-<div class="card">
-<div class="small">Actifs</div>
-<div class="kpi">...</div>
-</div>
-""", unsafe_allow_html=True)
+        st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
+        
+        tabs = st.tabs(["💰 ATM", "🛒 Supérette", "🏎️ Go Fast", "🏠 Cambriolage", "🌿 Drogue"])
 
         def handle_submit(action, butin=0, drogue="N/A", quantite=0):
             try:
