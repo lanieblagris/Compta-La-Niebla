@@ -173,8 +173,9 @@ else:
     df_full = conn.read(worksheet="Rapports", ttl=0)
 
     if choice == "Tableau de bord":
-        st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
-         tabs = st.tabs(["💰 ATM", "🛒 Supérette", "🏎️ Go Fast", "🏠 Cambriolage", "🌿 Drogue"])
+    st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
+
+    tabs = st.tabs(["💰 ATM", "🛒 Supérette", "🏎️ Go Fast", "🏠 Cambriolage", "🌿 Drogue"])
 
          
         col1, col2, col3 = st.columns(3)
