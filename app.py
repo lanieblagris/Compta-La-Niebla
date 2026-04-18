@@ -136,26 +136,36 @@ else:
     u_pseudo = st.session_state.get('user_pseudo', 'Soldado')
     u_role_lv = st.session_state.get('role_level', 3)
 
-    # Sidebar Navigation
+   # Sidebar Navigation
     with st.sidebar:
-        if u_role_lv == 1: icon, r_name = "⚜️", "El Patron"
-        elif u_role_lv == 2: icon, r_name = "⭐", "Lieutenant"
-        else: icon, r_name = "🔫", "Sicario"
+        # On récupère le niveau de rôle
+        u_role_lv = st.session_state.get('role_level', 3)
+        u_pseudo = st.session_state.get('user_pseudo', 'Soldado')
+
+        # Logique d'affichage des grades
+        if u_role_lv == 1:
+            icon, r_name = "⚜️", "El Patron"
+        elif u_role_lv == 2:
+            icon, r_name = "⭐", "Lieutenant"
+        else:
+            icon, r_name = "🔫", "Sicario"
         
         st.write(f"### {u_pseudo} {icon}")
         st.write(f"**Rang :** {r_name}")
         st.write("---")
         
+        # Menu dynamique selon le rôle
         menu = ["Tableau de bord"]
         if u_role_lv <= 2:
             menu += ["Comptabilité Globale", "Archives de la Niebla"]
             
         choice = st.sidebar.radio("Navigation", menu)
         
+        st.write("---")
         if st.sidebar.button("Se déconnecter"):
             st.session_state.clear()
             st.rerun()
-
+            
     # Lecture des données
     df_full = conn.read(worksheet="Rapports", ttl=0)
 
