@@ -53,7 +53,8 @@ st.markdown(f"""
     .objectif-cash {{ font-size: 1.1em; color: #00ff00; font-weight: bold; font-family: 'Courier New', monospace;}}
     
     [data-testid="stMetricValue"] {{ color: #d4af37 !important; font-family: 'Courier New', monospace; font-size: 32px; }}
-    
+    [data-testid="stMetricLabel"] {{ color: #a6a6a6 !important; }}
+
     #bgVideo {{ filter: brightness(0.3); }}
     </style>
     <video autoplay loop muted playsinline id="bgVideo"><source src="{VIDEO_URL}" type="video/mp4"></video>
@@ -145,7 +146,7 @@ else:
         st.markdown("---")
 
         # --- OBJECTIFS DE LA SEMAINE ---
-        st.write("### 📊 Objectifs de la Semaine & Bilan Financier")
+        st.write("### 📊 Objectifs de la Semaine & Bilan Actions")
         if not df_full.empty:
             df_stats = df_full.copy()
             df_stats['Date'] = pd.to_datetime(df_stats['Date'], dayfirst=True, errors='coerce')
@@ -160,31 +161,35 @@ else:
             st.markdown("""
                 <div style="display: flex; font-weight: bold; color: #a6a6a6; padding: 10px 0; border-bottom: 2px solid #d4af37; margin-bottom: 10px;">
                     <div style="flex: 1.2;">MEMBRE</div>
-                    <div style="flex: 1;">RÉCOLTÉ ($)</div>
-                    <div style="flex: 2;">ACTIONS (20)</div>
-                    <div style="flex: 2;">VENTES (300)</div>
+                    <div style="flex: 1;">BUTIN ACTIONS ($)</div>
+                    <div style="flex: 2;">PROGRESSION ACTIONS (20)</div>
+                    <div style="flex: 2;">PROGRESSION VENTES (300)</div>
                 </div>
             """, unsafe_allow_html=True)
 
             for p_id, p_info in USERS.items():
                 ps = p_info["pseudo"]
                 u_data = week_data[week_data['Membre'] == ps]
-                total_cash = u_data['Butin'].sum()
+                
+                # NOUVEAU : On ne calcule le butin QUE pour les actions hors drogue/ajustements ventes
+                actions_cash = u_data[~u_data['Action'].str.contains("Drogue|Ventes", case=False, na=False)]['Butin'].sum()
+                
                 normal_act = len(u_data[(u_data['Action'] != "Drogue") & (~u_data['Action'].str.contains("Ajustement", na=False))])
                 adj_act = u_data[u_data['Action'] == "Ajustement Action"]["Quantite"].sum()
                 total_act = int(normal_act + adj_act)
+                
                 total_vnt = abs(u_data[u_data['Action'].str.contains("Drogue|Ventes", case=False, na=False)]['Quantite'].sum())
                 
                 c1, c2, c3, c4 = st.columns([1.2, 1, 2, 2])
                 c1.markdown(f'<div class="objectif-pseudo">{ps}</div>', unsafe_allow_html=True)
-                c2.markdown(f'<div class="objectif-cash">{int(total_cash):,} $</div>'.replace(',', ' '), unsafe_allow_html=True)
+                c2.markdown(f'<div class="objectif-cash">{int(actions_cash):,} $</div>'.replace(',', ' '), unsafe_allow_html=True)
                 c3.progress(min(float(total_act)/20, 1.0), text=f"{total_act}/20")
                 c4.progress(min(float(total_vnt)/300, 1.0), text=f"{int(total_vnt)}/300")
                 st.write("")
         
         st.markdown("---")
 
-        # --- RESTAURATION : MES 3 DERNIÈRES ACTIVITÉS ---
+        # --- MES 3 DERNIÈRES ACTIVITÉS ---
         st.write("### 🕒 Mes 3 dernières activités")
         if not df_full.empty:
             mes_actions = df_full[
@@ -194,7 +199,6 @@ else:
             if not mes_actions.empty:
                 mes_actions['Butin'] = mes_actions['Butin'].apply(lambda x: f"{int(float(x)):,} $".replace(',', ' '))
                 st.table(mes_actions[['Date', 'Action', 'Butin']])
-            else: st.info("Aucune action récente.")
 
     elif choice == "Archives de la Niebla":
         st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
@@ -202,7 +206,26 @@ else:
 
     elif choice == "Comptabilité Globale":
         st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
-        # (Le code d'ajustement Admin reste ici)
+        
+        df_v = conn.read(worksheet="Tresorerie", ttl=0)
+        if not df_v.empty:
+            def calc(df, et):
+                sub = df[df['Etat'] == et]
+                return sub[sub['Type'] == 'Recette']['Montant'].sum() - sub[sub['Type'] == 'Dépense']['Montant'].sum()
+            
+            sp, ss = calc(df_v, 'Propre'), calc(df_v, 'Sale')
+            
+            c1, c2, c3 = st.columns(3)
+            c1.metric("TRÉSOR PROPRE", f"{int(sp):,} $".replace(',', ' '))
+            c2.metric("TRÉSOR SALE", f"{int(ss):,} $".replace(',', ' '))
+            c3.metric("TOTAL GLOBAL", f"{int(sp+ss):,} $".replace(',', ' '))
+            
+            st.markdown("---")
+            st.write("### Historique complet des flux (Drogue + Actions)")
+            st.dataframe(df_v.sort_index(ascending=False), use_container_width=True)
+
+        st.markdown("---")
+
         with st.expander("🛠️ CORRIGER/AJOUTER OBJECTIFS"):
             with st.form("adj_manual_bulk"):
                 target_user = st.selectbox("Membre", [u["pseudo"] for u in USERS.values()])
@@ -217,4 +240,19 @@ else:
                         nl = pd.DataFrame([{"Date": ts, "Membre": target_user, "Action": name, "Drogue": "N/A", "Quantite": q_to_save, "Butin": 0}])
                         conn.update(worksheet="Rapports", data=pd.concat([df_r, nl], ignore_index=True))
                         st.success("Bilan mis à jour !"); time.sleep(1); st.rerun()
+                    except Exception as e: st.error(e)
+
+        with st.expander("➕ Opération financière manuelle"):
+            with st.form("man_fin"):
+                c_a, c_b = st.columns(2)
+                m_t = c_a.selectbox("Type", ["Recette", "Dépense"])
+                m_e = c_b.selectbox("État", ["Sale", "Propre"])
+                m_c = st.text_input("Catégorie")
+                m_v = st.number_input("Montant ($)", min_value=0)
+                if st.form_submit_button("VALIDER FINANCES"):
+                    try:
+                        df_t = conn.read(worksheet="Tresorerie", ttl=0)
+                        nl = pd.DataFrame([{"Date": get_now(), "Type": m_t, "Etat": m_e, "Catégorie": m_c, "Montant": float(m_v), "Note": f"Admin: {st.session_state['user_pseudo']}"}])
+                        conn.update(worksheet="Tresorerie", data=pd.concat([df_t, nl], ignore_index=True))
+                        st.success("Enregistré !"); time.sleep(1); st.rerun()
                     except Exception as e: st.error(e)
