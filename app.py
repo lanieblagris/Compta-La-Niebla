@@ -289,8 +289,7 @@ else:
         c1, c2, c3 = st.columns(3)
         c1.metric("PROPRE ⚜️", f"{int(p):,} $".replace(',',' '))
         c2.metric("SALE 💵", f"{int(s):,} $".replace(',',' '))
-        c3.metric("TOTAL", f"{int(p+s):,} $".replace(',',' '))
-
+        
         if u_role_lv == 1:
             st.write("---")
             col_a, col_b = st.columns(2)
