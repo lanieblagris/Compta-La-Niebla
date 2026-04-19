@@ -43,17 +43,57 @@ def set_bg_video():
 
 set_bg_video()
 
-# --- 2. STYLE CSS ---
-st.markdown(f"""
+# --- 3. STYLE CSS ---
+st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&family=Marcellus&display=swap');
-    .stApp {{ background: url('https://w0.peakpx.com/wallpaper/70/463/wallpaper-dark-grey-textured-dark-grey-background-textured-background.jpg'); background-size: cover; background-attachment: fixed; }}
-    h1, h2, h3, h4, p, label, .stMarkdown, [data-testid="stWidgetLabel"] {{ color: #f7e0a3 !important; font-family: 'Marcellus', serif !important; }}
-    .gta-title {{ font-family: 'UnifrakturMaguntia', cursive; font-size: 80px; color: transparent; background-image: linear-gradient(to bottom, #f7e0a3, #b48c3e, #f7e0a3); -webkit-background-clip: text; background-clip: text; text-align: center; margin-top: -50px; }}
-    .stForm {{ background-color: rgba(10, 10, 10, 0.85) !important; border: 1px solid #b48c3e !important; border-radius: 8px; padding: 20px; }}
-    [data-testid="stSidebar"] {{ background-color: rgba(15, 15, 15, 0.98) !important; border-right: 1px solid #b48c3e; }}
-    .stProgress > div > div > div > div {{ background-image: linear-gradient(to right, #b48c3e, #f7e0a3) !important; }}
-    th {{ color: #b48c3e !important; }} td {{ color: #ffffff !important; }}
+    
+    /* Fond transparent pour l'application */
+    .stApp { background: transparent; }
+    
+    /* Couleurs des textes et polices */
+    h1, h2, h3, h4, p, label, .stMarkdown, [data-testid="stWidgetLabel"] { 
+        color: #f7e0a3 !important; 
+        font-family: 'Marcellus', serif !important; 
+    }
+    
+    /* Titre principal */
+    .gta-title { 
+        font-family: 'UnifrakturMaguntia', cursive; 
+        font-size: 80px; 
+        color: transparent; 
+        background-image: linear-gradient(to bottom, #f7e0a3, #b48c3e, #f7e0a3); 
+        -webkit-background-clip: text; 
+        background-clip: text; 
+        text-align: center; 
+        margin-top: -50px; 
+    }
+    
+    /* MODIFICATION DE L'OPACITÉ ICI */
+    /* background-color: rgba(10, 10, 10, 0.4) -> 0.4 = 40% d'opacité */
+    .stForm { 
+        background-color: rgba(10, 10, 10, 0.4) !important; 
+        border: 1px solid rgba(180, 140, 62, 0.5) !important; 
+        border-radius: 12px; 
+        padding: 20px;
+        backdrop-filter: blur(5px); /* Effet de flou derrière le formulaire */
+    }
+    
+    /* Sidebar (Barre latérale) plus ou moins opaque */
+    [data-testid="stSidebar"] { 
+        background-color: rgba(15, 15, 15, 0.7) !important; 
+        border-right: 1px solid #b48c3e;
+        backdrop-filter: blur(10px);
+    }
+    
+    /* Barre de progression */
+    .stProgress > div > div > div > div { 
+        background-image: linear-gradient(to right, #b48c3e, #f7e0a3) !important; 
+    }
+    
+    /* Tableaux */
+    th { color: #b48c3e !important; background-color: rgba(0,0,0,0.2) !important; } 
+    td { color: #ffffff !important; background-color: rgba(0,0,0,0.1) !important; }
     </style>
     """, unsafe_allow_html=True)
 
