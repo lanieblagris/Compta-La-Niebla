@@ -281,7 +281,7 @@ else:
                     st.rerun()
 
     # --- COMPTABILITÉ ---
-    elif choice == "💵 Comptabilité Globale":
+    elif choice == "💵 Trésorerie":
         st.markdown('<div class="gta-title">Trésorerie</div>', unsafe_allow_html=True)
         def solde(etat):
             return df_v[(df_v['Etat']==etat)&(df_v['Type']=='Recette')]['Montant'].sum() - df_v[(df_v['Etat']==etat)&(df_v['Type']=='Dépense')]['Montant'].sum()
