@@ -18,7 +18,7 @@ USERS = {
     "Alain": {"password": "999cww59", "pseudo": "Alain Bourdin", "role_level": 3, "is_drug_manager": False},
 }
 
-DRUG_LIST = ["Marijuana", "Cocaine", "Meth", "Heroine", "Tranq", "Carte Prépayer", "B-magic", "Crack", "Autre"]
+DRUG_LIST = ["Marijuana", "Cocaine", "Meth", "Heroine", "Tranq", "Carte Prépayer", "B-magic", "Crack", "Purple", "Autre"]
 
 # --- 2. STYLE CSS LUXE ---
 st.markdown(f"""
