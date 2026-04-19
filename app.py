@@ -218,7 +218,7 @@ else:
 
    # --- STOCKS ---
     elif choice == "📦 Gestion des Stocks":
-        st.markdown('<div class="gta-title">Stocks</div>', unsafe_allow_html=True)
+        st.markdown('<div class="gta-title">Gestion des Stocks</div>', unsafe_allow_html=True)
         
         # S'assurer que tous les produits sont dans le DataFrame
         for p in DRUG_LIST:
