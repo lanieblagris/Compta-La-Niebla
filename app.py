@@ -8,9 +8,8 @@ import time
 # --- 1. CONFIGURATION ---
 st.set_page_config(page_title="La Niebla - Luxury Cartel", page_icon="⚜️", layout="wide")
 
-# Roles: 1: El Patron, 2: Lieutenant, 3: Sicario | is_drug_manager: True/False
 USERS = {
-   "Admin": {"password": "0000", "pseudo": "El Patron", "role_level": 1, "is_drug_manager": True},
+    "Admin": {"password": "0000", "pseudo": "El Patron", "role_level": 1, "is_drug_manager": True},
     "Alex": {"password": "Alx220717", "pseudo": "Alex Smith", "role_level": 3, "is_drug_manager": False},
     "Dany": {"password": "081219", "pseudo": "Dany Smith", "role_level": 2, "is_drug_manager": True},
     "Aziz": {"password": "asmith", "pseudo": "Aziz Smith", "role_level": 3, "is_drug_manager": False},
@@ -29,9 +28,7 @@ st.markdown(f"""
     .stForm {{ background-color: rgba(10, 10, 10, 0.85) !important; border: 1px solid #b48c3e !important; border-radius: 8px; padding: 20px; }}
     [data-testid="stSidebar"] {{ background-color: rgba(15, 15, 15, 0.98) !important; border-right: 1px solid #b48c3e; }}
     .stProgress > div > div > div > div {{ background-image: linear-gradient(to right, #b48c3e, #f7e0a3) !important; }}
-    th {{ color: #b48c3e !important; border-bottom: 1px solid #b48c3e !important; }} 
-    td {{ color: #ffffff !important; }}
-    [data-testid="stMetricValue"] {{ color: #f7e0a3 !important; }}
+    th {{ color: #b48c3e !important; }} td {{ color: #ffffff !important; }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -44,7 +41,7 @@ def get_now():
 if 'connected' not in st.session_state:
     st.session_state['connected'] = False
 
-# --- 4. CONNEXION ---
+# --- 4. LOGIQUE CONNEXION ---
 if not st.session_state['connected']:
     st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
     _, mid, _ = st.columns([1, 1.2, 1])
@@ -74,7 +71,7 @@ else:
         choice = st.radio("Navigation", menu)
         if st.button("Se déconnecter"): st.session_state.clear(); st.rerun()
 
-    # --- CHARGEMENT DONNÉES ---
+    # Lecture des données
     df_full = conn.read(worksheet="Rapports", ttl=0)
     df_v = conn.read(worksheet="Tresorerie", ttl=0)
     df_stock = conn.read(worksheet="Stocks", ttl=0)
@@ -86,15 +83,14 @@ else:
         
         def submit_op(action, butin=0, drogue="N/A", qte=0):
             ts = get_now()
-            # 1. Rapport
             df_r = conn.read(worksheet="Rapports", ttl=0)
             new_r = pd.DataFrame([{"Date": ts, "Membre": u_pseudo, "Action": action, "Drogue": drogue, "Quantite": float(qte), "Butin": float(butin)}])
             conn.update(worksheet="Rapports", data=pd.concat([df_r, new_r], ignore_index=True))
-            # 2. Trésorerie
+            
             df_t = conn.read(worksheet="Tresorerie", ttl=0)
             new_t = pd.DataFrame([{"Date": ts, "Type": "Recette", "Etat": "Sale", "Catégorie": action, "Montant": float(butin), "Note": f"Par {u_pseudo}"}])
             conn.update(worksheet="Tresorerie", data=pd.concat([df_t, new_t], ignore_index=True))
-            # 3. Stock Auto
+            
             if action == "Drogue" and drogue != "N/A":
                 dfs = conn.read(worksheet="Stocks", ttl=0)
                 if drogue in dfs['Produit'].values:
@@ -103,26 +99,26 @@ else:
             st.success("Transmis !"); time.sleep(1); st.rerun()
 
         with tabs[0]:
-            with st.form("atm_f"):
+            with st.form("atm"):
                 b = st.number_input("Butin ATM ($)", min_value=0)
                 if st.form_submit_button("VALIDER"): submit_op("ATM", butin=b)
         with tabs[1]:
-            with st.form("sup_f"):
+            with st.form("sup"):
                 b = st.number_input("Butin Supérette ($)", min_value=0)
                 if st.form_submit_button("VALIDER"): submit_op("Supérette", butin=b)
         with tabs[2]:
-            with st.form("gf_f"):
+            with st.form("gf"):
                 b = st.number_input("Butin Go Fast ($)", min_value=0)
                 if st.form_submit_button("VALIDER"): submit_op("Go Fast", butin=b)
         with tabs[3]:
             if st.button("CONFIRMER CAMBRIOLAGE"): submit_op("Cambriolage")
         with tabs[4]:
-            with st.form("drug_f"):
+            with st.form("drug"):
                 d = st.selectbox("Produit", DRUG_LIST); q = st.number_input("Unités", min_value=0.0); b = st.number_input("Prix total ($)", min_value=0)
                 if st.form_submit_button("VALIDER VENTE"): submit_op("Drogue", butin=b, drogue=d, qte=-abs(q))
 
         st.markdown("---")
-        # --- OBJECTIFS ET CLASSEMENT ---
+        # --- CLASSEMENT & OBJECTIFS ---
         if not df_full.empty:
             df_full['Date'] = pd.to_datetime(df_full['Date'], dayfirst=True, errors='coerce')
             start_week = (datetime.datetime.now() - timedelta(days=datetime.datetime.now().weekday())).replace(hour=0, minute=0, second=0)
@@ -132,10 +128,8 @@ else:
             for u_id, info in USERS.items():
                 ps = info["pseudo"]; u_data = week_data[week_data['Membre'] == ps]
                 cash = u_data[~u_data['Action'].str.contains("Drogue|Ajustement", na=False)]['Butin'].sum()
-                # Prise en compte des ajustements d'actions
                 adj_act = u_data[u_data['Action'] == "Ajustement Actions"]['Quantite'].sum()
                 act = len(u_data[(u_data['Action'] != "Drogue") & (~u_data['Action'].str.contains("Ajustement"))]) + adj_act
-                # Prise en compte des ajustements de ventes
                 adj_vnt = abs(u_data[u_data['Action'] == "Ajustement Ventes"]['Quantite'].sum())
                 vnt = abs(u_data[u_data['Action'] == "Drogue"]['Quantite'].sum()) + adj_vnt
                 
@@ -145,7 +139,7 @@ else:
                 c3.progress(min(float(act)/20, 1.0), text=f"{int(act)}/20")
                 c4.progress(min(float(vnt)/300, 1.0), text=f"{int(vnt)}/300")
 
-         st.markdown("---")
+            st.markdown("---")
             st.write("### 🏆 Classement interne (Revenus)")
             top = week_data.groupby("Membre")["Butin"].sum().reset_index().sort_values(by="Butin", ascending=False)
             for i, row in top.reset_index(drop=True).iterrows():
@@ -158,7 +152,24 @@ else:
             mes['Butin'] = mes['Butin'].apply(lambda x: f"{int(float(x)):,} $".replace(',', ' '))
             st.table(mes[['Date', 'Action', 'Butin']])
 
-    # --- COMPTABILITÉ GLOBALE (AVEC MODIFICATEURS) ---
+    # --- STOCKS ---
+    elif choice == "📦 Gestion des Stocks":
+        st.markdown('<div class="gta-title">Stocks</div>', unsafe_allow_html=True)
+        for p in DRUG_LIST:
+            if p not in df_stock['Produit'].values:
+                df_stock = pd.concat([df_stock, pd.DataFrame([{"Produit": p, "Quantite": 0.0}])], ignore_index=True)
+        c1, c2 = st.columns([1.5, 1])
+        with c1: st.table(df_stock)
+        with c2:
+            with st.form("stk"):
+                ps = st.selectbox("Produit", DRUG_LIST); ms = st.radio("Mode", ["Ajout", "Retrait"]); qs = st.number_input("Quantité", min_value=0.0)
+                if st.form_submit_button("VALIDER"):
+                    val = qs if ms == "Ajout" else -qs
+                    df_stock.loc[df_stock['Produit'] == ps, 'Quantite'] += val
+                    conn.update(worksheet="Stocks", data=df_stock)
+                    st.success("Fait !"); time.sleep(1); st.rerun()
+
+    # --- COMPTABILITÉ ---
     elif choice == "Comptabilité Globale":
         st.markdown('<div class="gta-title">Trésorerie</div>', unsafe_allow_html=True)
         def solde(etat):
@@ -173,43 +184,26 @@ else:
             st.write("---")
             col_a, col_b = st.columns(2)
             with col_a:
-                with st.expander("🛠️ CORRIGER UNE ERREUR (ACTIONS/VENTES)"):
-                    with st.form("adj_err"):
+                with st.expander("🛠️ CORRECTIONS"):
+                    with st.form("adj"):
                         target = st.selectbox("Membre", [u["pseudo"] for u in USERS.values()])
-                        type_adj = st.radio("Type à corriger", ["Actions", "Ventes"])
-                        val = st.number_input("Valeur à ajouter (ex: 5) ou retirer (ex: -5)", value=0.0)
-                        if st.form_submit_button("APPLIQUER CORRECTION"):
+                        t_adj = st.radio("Type", ["Actions", "Ventes"])
+                        v_adj = st.number_input("Valeur (+/-)", value=0.0)
+                        if st.form_submit_button("OK"):
                             df_r = conn.read(worksheet="Rapports", ttl=0)
-                            # On enregistre l'ajustement comme une ligne spéciale
-                            new_l = pd.DataFrame([{"Date": get_now(), "Membre": target, "Action": f"Ajustement {type_adj}", "Drogue": "N/A", "Quantite": val, "Butin": 0}])
-                            conn.update(worksheet="Rapports", data=pd.concat([df_r, new_l], ignore_index=True))
-                            st.success("Correction effectuée !"); time.sleep(1); st.rerun()
+                            new = pd.DataFrame([{"Date": get_now(), "Membre": target, "Action": f"Ajustement {t_adj}", "Drogue": "N/A", "Quantite": v_adj, "Butin": 0}])
+                            conn.update(worksheet="Rapports", data=pd.concat([df_r, new], ignore_index=True))
+                            st.success("Corrigé !"); time.sleep(1); st.rerun()
             with col_b:
-                with st.expander("💰 MOUVEMENT DE CAISSE MANUEL"):
-                    with st.form("caisse_m"):
-                        tm = st.selectbox("Sens", ["Recette", "Dépense"]); em = st.selectbox("Compte", ["Sale", "Propre"]); vm = st.number_input("Montant ($)", min_value=0); rm = st.text_input("Raison")
-                        if st.form_submit_button("VALIDER MOUVEMENT"):
+                with st.expander("💰 CAISSE"):
+                    with st.form("cais"):
+                        tm = st.selectbox("Sens", ["Recette", "Dépense"]); em = st.selectbox("Compte", ["Sale", "Propre"]); vm = st.number_input("Montant", min_value=0); rm = st.text_input("Note")
+                        if st.form_submit_button("OK"):
                             df_t = conn.read(worksheet="Tresorerie", ttl=0)
-                            new_t = pd.DataFrame([{"Date": get_now(), "Type": tm, "Etat": em, "Catégorie": "Manuel", "Montant": float(vm), "Note": f"{rm} (par {u_pseudo})"}])
-                            conn.update(worksheet="Tresorerie", data=pd.concat([df_t, new_t], ignore_index=True))
-                            st.success("Caisse mise à jour !"); time.sleep(1); st.rerun()
-
-        st.write("### Historique financier")
+                            new = pd.DataFrame([{"Date": get_now(), "Type": tm, "Etat": em, "Catégorie": "Manuel", "Montant": float(vm), "Note": rm}])
+                            conn.update(worksheet="Tresorerie", data=pd.concat([df_t, new], ignore_index=True))
+                            st.success("Fait !"); time.sleep(1); st.rerun()
         st.dataframe(df_v.sort_index(ascending=False), use_container_width=True)
-
-    # --- STOCKS ---
-    elif choice == "📦 Gestion des Stocks":
-        st.markdown('<div class="gta-title">Stocks</div>', unsafe_allow_html=True)
-        c1, c2 = st.columns([1.5, 1])
-        with c1: st.table(df_stock)
-        with c2:
-            with st.form("stk"):
-                ps = st.selectbox("Produit", DRUG_LIST); ms = st.radio("Mode", ["Ajout", "Retrait"]); qs = st.number_input("Quantité", min_value=0.0)
-                if st.form_submit_button("MISE À JOUR STOCK"):
-                    val = qs if ms == "Ajout" else -qs
-                    df_stock.loc[df_stock['Produit'] == ps, 'Quantite'] += val
-                    conn.update(worksheet="Stocks", data=df_stock)
-                    st.success("Fait !"); time.sleep(1); st.rerun()
 
     elif choice == "Archives":
         st.markdown('<div class="gta-title">Archives</div>', unsafe_allow_html=True)
