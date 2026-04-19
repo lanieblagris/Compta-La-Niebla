@@ -18,6 +18,35 @@ USERS = {
 
 DRUG_LIST = ["Marijuana", "Cocaine", "Meth", "Heroine", "Tranq", "Carte Prépayer", "B-magic", "Crack", "Purple", "Autre"]
 
+# --- 2. FONCTION VIDÉO DE FOND ---
+def get_base64_bin_file(bin_file):
+    with open(bin_file, 'rb') as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
+
+def set_bg_video(video_file):
+    bin_str = get_base64_bin_file(video_file)
+    video_html = f'''
+    <video autoplay loop muted playsinline style="
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        min-width: 100%;
+        min-height: 100%;
+        z-index: -1;
+        filter: brightness(0.4);
+        object-fit: cover;">
+        <source src="data:video/mp4;base64,{bin_str}" type="video/mp4">
+    </video>
+    '''
+    st.markdown(video_html, unsafe_allow_html=True)
+
+# Application de la vidéo fog.mp4
+try:
+    set_bg_video('fog.mp4')
+except:
+    st.warning("Vidéo de fond introuvable. Vérifiez que fog.mp4 est à la racine de votre GitHub.")
+
 # --- 2. STYLE CSS ---
 st.markdown(f"""
     <style>
