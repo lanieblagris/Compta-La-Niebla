@@ -185,7 +185,18 @@ else:
         # --- CLASSEMENT & OBJECTIFS ---
         if not df_full.empty:
             df_full['Date'] = pd.to_datetime(df_full['Date'], dayfirst=True, errors='coerce')
-            start_week = (datetime.datetime.now() - timedelta(days=datetime.datetime.now().weekday())).replace(hour=0, minute=0, second=0)
+            
+            # Calcul du cycle : Dimanche 19h
+            now = datetime.datetime.now()
+            # On remonte au lundi 00:00 de la semaine actuelle
+            monday = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+            # Le point de départ est le dimanche précédent à 19:00 (5h avant lundi minuit)
+            start_week = monday - timedelta(hours=5) 
+            
+            # Si nous sommes dimanche et qu'il est plus de 19h, on commence déjà la semaine suivante
+            if now.weekday() == 6 and now.hour >= 19:
+                start_week = now.replace(hour=19, minute=0, second=0, microsecond=0)
+
             week_data = df_full[df_full['Date'] >= start_week]
 
             st.write("### 📊 Objectifs de la Semaine")
