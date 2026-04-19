@@ -128,9 +128,8 @@ else:
     with st.sidebar:
         icon = "⚜️" if u_role_lv == 1 else "⭐" if u_role_lv == 2 else "🔫"
         st.write(f"### {u_pseudo} {icon}")
-        if is_drug_boss: st.info("🌿 Responsable Drogue")
         st.write("---")
-        menu = ["Tableau de bord"]
+        menu = ["🔫 Tableau de bord"]
         if u_role_lv <= 2 or is_drug_boss: menu += ["📦 Gestion des Stocks"]
         if u_role_lv <= 2: menu += ["Comptabilité Globale", "Archives"]
         choice = st.radio("Navigation", menu)
@@ -142,7 +141,7 @@ else:
     df_stock = conn.read(worksheet="Stocks", ttl=0)
 
     # --- TABLEAU DE BORD ---
-    if choice == "Tableau de bord":
+    if choice == "🔫 Tableau de bord":
         st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
         tabs = st.tabs(["💰 ATM", "🛒 Supérette", "🏎️ Go Fast", "🏠 Cambriolage", "🌿 Drogue"])
         
