@@ -227,7 +227,6 @@ else:
         df_display = df_stock.copy()
         # On formate la colonne Quantité : pas de virgules inutiles et ajout de l'unité
         df_display['Quantite'] = df_display['Quantite'].apply(lambda x: f"{int(x):,}".replace(",", " ") + " unités")
-        
         st.table(df_display)
         with c2:
             with st.form("stk"):
