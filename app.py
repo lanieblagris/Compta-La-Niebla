@@ -145,6 +145,19 @@ else:
                 c3.progress(min(float(act)/20, 1.0), text=f"{int(act)}/20")
                 c4.progress(min(float(vnt)/300, 1.0), text=f"{int(vnt)}/300")
 
+    st.markdown("---")
+            st.write("### 🏆 Classement interne (Revenus)")
+            classement = week_data.groupby("Membre")["Butin"].sum().reset_index().sort_values(by="Butin", ascending=False)
+            for i, row in classement.reset_index(drop=True).iterrows():
+                st.write(f"{i+1}. {row['Membre']} — **{int(row['Butin']):,} $**".replace(",", " "))
+
+        st.markdown("---")
+        st.write("### 🕒 Mes 3 dernières activités")
+        mes_actions = df_full[df_full['Membre'] == u_pseudo].tail(3).iloc[::-1].copy()
+        if not mes_actions.empty:
+            mes_actions['Butin'] = mes_actions['Butin'].apply(lambda x: f"{int(float(x)):,} $".replace(',', ' '))
+            st.table(mes_actions[['Date', 'Action', 'Butin']])
+
     # --- COMPTABILITÉ GLOBALE (AVEC MODIFICATEURS) ---
     elif choice == "Comptabilité Globale":
         st.markdown('<div class="gta-title">Trésorerie</div>', unsafe_allow_html=True)
