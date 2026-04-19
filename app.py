@@ -4,6 +4,8 @@ import pandas as pd
 import datetime
 from datetime import timedelta
 import time
+import os
+import base64
 
 # --- 1. CONFIGURATION ---
 st.set_page_config(page_title="La Niebla - Luxury Cartel", page_icon="⚜️", layout="wide")
