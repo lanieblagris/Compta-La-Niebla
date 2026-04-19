@@ -218,32 +218,65 @@ else:
 
    # --- STOCKS ---
     elif choice == "📦 Gestion des Stocks":
-        st.markdown('<div class="gta-title">Gestion des Stocks</div>', unsafe_allow_html=True)
+        st.markdown('<div class="gta-title">Stocks & Ventes</div>', unsafe_allow_html=True)
         
-        # S'assurer que tous les produits sont dans le DataFrame
+        # Vérification des produits
         for p in DRUG_LIST:
             if p not in df_stock['Produit'].values:
                 df_stock = pd.concat([df_stock, pd.DataFrame([{"Produit": p, "Quantite": 0.0}])], ignore_index=True)
         
-        c1, c2 = st.columns([1.5, 1])
+        c1, c2 = st.columns([1.2, 1])
         
         with c1:
-            # --- CORRECTION DE L'INDENTATION ICI ---
+            st.write("### 📦 État des Réserves")
             df_display = df_stock.copy()
-            # Formate l'affichage pour éviter les "1,000.0000"
             df_display['Quantite'] = df_display['Quantite'].apply(lambda x: f"{int(x):,}".replace(",", " ") + " unités")
             st.table(df_display)
         
         with c2:
-            with st.form("stk"):
+            st.write("### 📝 Nouvelle Opération")
+            with st.form("stk_pro"):
                 ps = st.selectbox("Produit", DRUG_LIST)
-                ms = st.radio("Mode", ["Ajout", "Retrait"])
-                qs = st.number_input("Quantité", min_value=0.0)
-                if st.form_submit_button("VALIDER"):
-                    val = qs if ms == "Ajout" else -qs
-                    df_stock.loc[df_stock['Produit'] == ps, 'Quantite'] += val
+                ms = st.radio("Type de mouvement", ["Vente (Sortie de stock)", "Achat (Entrée de stock)"])
+                qs = st.number_input("Quantité (Unités)", min_value=0.0)
+                amount = st.number_input("Montant de la transaction ($)", min_value=0)
+                
+                if st.form_submit_button("ENREGISTRER L'OPÉRATION"):
+                    # 1. Calcul pour le stock
+                    # Si c'est une vente, on retire du stock (-). Si c'est un achat, on ajoute (+).
+                    val_stock = -qs if ms == "Vente (Sortie de stock)" else qs
+                    df_stock.loc[df_stock['Produit'] == ps, 'Quantite'] += val_stock
                     conn.update(worksheet="Stocks", data=df_stock)
-                    st.success("Fait !")
+                    
+                    # 2. Calcul pour la trésorerie (Automatique)
+                    # Si c'est une vente, c'est une Recette. Si c'est un achat, c'est une Dépense.
+                    type_transa = "Recette" if ms == "Vente (Sortie de stock)" else "Dépense"
+                    note_auto = f"{ms} de {int(qs)} unités de {ps} par {u_pseudo}"
+                    
+                    df_t = conn.read(worksheet="Tresorerie", ttl=0)
+                    new_t = pd.DataFrame([{
+                        "Date": get_now(),
+                        "Type": type_transa,
+                        "Etat": "Sale", # Par défaut pour la drogue
+                        "Catégorie": "Drogue",
+                        "Montant": float(amount),
+                        "Note": note_auto
+                    }])
+                    conn.update(worksheet="Tresorerie", data=pd.concat([df_t, new_t], ignore_index=True))
+                    
+                    # 3. Rapport d'activité
+                    df_r = conn.read(worksheet="Rapports", ttl=0)
+                    new_r = pd.DataFrame([{
+                        "Date": get_now(),
+                        "Membre": u_pseudo,
+                        "Action": "Gestion Stock",
+                        "Drogue": ps,
+                        "Quantite": float(val_stock),
+                        "Butin": float(amount)
+                    }])
+                    conn.update(worksheet="Rapports", data=pd.concat([df_r, new_r], ignore_index=True))
+                    
+                    st.success(f"Opération validée : {ms} enregistrée !")
                     time.sleep(1)
                     st.rerun()
 
