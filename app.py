@@ -216,26 +216,36 @@ else:
             mes['Butin'] = mes['Butin'].apply(lambda x: f"{int(float(x)):,} $".replace(',', ' '))
             st.table(mes[['Date', 'Action', 'Butin']])
 
-    # --- STOCKS ---
+   # --- STOCKS ---
     elif choice == "📦 Gestion des Stocks":
         st.markdown('<div class="gta-title">Stocks</div>', unsafe_allow_html=True)
+        
+        # S'assurer que tous les produits sont dans le DataFrame
         for p in DRUG_LIST:
             if p not in df_stock['Produit'].values:
                 df_stock = pd.concat([df_stock, pd.DataFrame([{"Produit": p, "Quantite": 0.0}])], ignore_index=True)
+        
         c1, c2 = st.columns([1.5, 1])
-        with c1: # On crée une copie pour l'affichage sans modifier la base de données
-        df_display = df_stock.copy()
-        # On formate la colonne Quantité : pas de virgules inutiles et ajout de l'unité
-        df_display['Quantite'] = df_display['Quantite'].apply(lambda x: f"{int(x):,}".replace(",", " ") + " unités")
-        st.table(df_display)
+        
+        with c1:
+            # --- CORRECTION DE L'INDENTATION ICI ---
+            df_display = df_stock.copy()
+            # Formate l'affichage pour éviter les "1,000.0000"
+            df_display['Quantite'] = df_display['Quantite'].apply(lambda x: f"{int(x):,}".replace(",", " ") + " unités")
+            st.table(df_display)
+        
         with c2:
             with st.form("stk"):
-                ps = st.selectbox("Produit", DRUG_LIST); ms = st.radio("Mode", ["Ajout", "Retrait"]); qs = st.number_input("Quantité", min_value=0.0)
+                ps = st.selectbox("Produit", DRUG_LIST)
+                ms = st.radio("Mode", ["Ajout", "Retrait"])
+                qs = st.number_input("Quantité", min_value=0.0)
                 if st.form_submit_button("VALIDER"):
                     val = qs if ms == "Ajout" else -qs
                     df_stock.loc[df_stock['Produit'] == ps, 'Quantite'] += val
                     conn.update(worksheet="Stocks", data=df_stock)
-                    st.success("Fait !"); time.sleep(1); st.rerun()
+                    st.success("Fait !")
+                    time.sleep(1)
+                    st.rerun()
 
     # --- COMPTABILITÉ ---
     elif choice == "💵 Comptabilité Globale":
