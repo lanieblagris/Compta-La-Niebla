@@ -8,10 +8,9 @@ import time
 # --- 1. CONFIGURATION ---
 st.set_page_config(page_title="La Niebla - Luxury Cartel", page_icon="⚜️", layout="wide")
 
-# Roles: 1: El Patron, 2: Lieutenant, 3: Sicario
-# is_drug_manager: True pour donner accès à l'onglet Stock
+# Roles: 1: El Patron, 2: Lieutenant, 3: Sicario | is_drug_manager: True/False
 USERS = {
-    "Admin": {"password": "0000", "pseudo": "El Patron", "role_level": 1, "is_drug_manager": True},
+   "Admin": {"password": "0000", "pseudo": "El Patron", "role_level": 1, "is_drug_manager": True},
     "Alex": {"password": "Alx220717", "pseudo": "Alex Smith", "role_level": 3, "is_drug_manager": False},
     "Dany": {"password": "081219", "pseudo": "Dany Smith", "role_level": 2, "is_drug_manager": True},
     "Aziz": {"password": "asmith", "pseudo": "Aziz Smith", "role_level": 3, "is_drug_manager": False},
@@ -20,7 +19,7 @@ USERS = {
 
 DRUG_LIST = ["Marijuana", "Cocaine", "Meth", "Heroine", "Tranq", "Carte Prépayer", "B-magic", "Crack", "Purple", "Autre"]
 
-# --- 2. STYLE CSS LUXE ---
+# --- 2. STYLE CSS ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&family=Marcellus&display=swap');
@@ -45,27 +44,21 @@ def get_now():
 if 'connected' not in st.session_state:
     st.session_state['connected'] = False
 
-# --- 4. LOGIQUE CONNEXION ---
+# --- 4. CONNEXION ---
 if not st.session_state['connected']:
     st.markdown('<div class="gta-title">La Niebla</div>', unsafe_allow_html=True)
     _, mid, _ = st.columns([1, 1.2, 1])
     with mid:
-        with st.form("login_form"):
+        with st.form("login"):
             u_in = st.text_input("NOM DE CODE")
             p_in = st.text_input("MOT DE PASSE", type="password")
             if st.form_submit_button("S'INFILTRER"):
                 if u_in in USERS and USERS[u_in]["password"] == p_in:
                     u_data = USERS[u_in]
-                    st.session_state.update({
-                        "connected": True, 
-                        "user_pseudo": u_data["pseudo"], 
-                        "role_level": u_data["role_level"], 
-                        "is_drug_manager": u_data["is_drug_manager"]
-                    })
+                    st.session_state.update({"connected": True, "user_pseudo": u_data["pseudo"], "role_level": u_data["role_level"], "is_drug_manager": u_data["is_drug_manager"]})
                     st.rerun()
                 else: st.error("Accès refusé.")
 else:
-    # Variables sécurisées pour éviter les KeyError
     u_pseudo = st.session_state.get('user_pseudo')
     u_role_lv = st.session_state.get('role_level')
     is_drug_boss = st.session_state.get('is_drug_manager')
@@ -81,14 +74,10 @@ else:
         choice = st.radio("Navigation", menu)
         if st.button("Se déconnecter"): st.session_state.clear(); st.rerun()
 
-    # Lecture des données
-    try:
-        df_full = conn.read(worksheet="Rapports", ttl=0)
-        df_v = conn.read(worksheet="Tresorerie", ttl=0)
-        df_stock = conn.read(worksheet="Stocks", ttl=0)
-    except:
-        st.error("Erreur de lecture Sheets. Vérifiez les noms d'onglets (Rapports, Tresorerie, Stocks).")
-        st.stop()
+    # --- CHARGEMENT DONNÉES ---
+    df_full = conn.read(worksheet="Rapports", ttl=0)
+    df_v = conn.read(worksheet="Tresorerie", ttl=0)
+    df_stock = conn.read(worksheet="Stocks", ttl=0)
 
     # --- TABLEAU DE BORD ---
     if choice == "Tableau de bord":
@@ -105,25 +94,35 @@ else:
             df_t = conn.read(worksheet="Tresorerie", ttl=0)
             new_t = pd.DataFrame([{"Date": ts, "Type": "Recette", "Etat": "Sale", "Catégorie": action, "Montant": float(butin), "Note": f"Par {u_pseudo}"}])
             conn.update(worksheet="Tresorerie", data=pd.concat([df_t, new_t], ignore_index=True))
-            # 3. MISE À JOUR AUTO DU STOCK
+            # 3. Stock Auto
             if action == "Drogue" and drogue != "N/A":
                 dfs = conn.read(worksheet="Stocks", ttl=0)
                 if drogue in dfs['Produit'].values:
-                    dfs.loc[dfs['Produit'] == drogue, 'Quantite'] += float(qte) # qte est négatif lors d'une vente
+                    dfs.loc[dfs['Produit'] == drogue, 'Quantite'] += float(qte)
                     conn.update(worksheet="Stocks", data=dfs)
-            st.success("Opération transmise !"); time.sleep(1); st.rerun()
+            st.success("Transmis !"); time.sleep(1); st.rerun()
 
         with tabs[0]:
-            with st.form("atm"):
-                b = st.number_input("Butin ($)", min_value=0)
+            with st.form("atm_f"):
+                b = st.number_input("Butin ATM ($)", min_value=0)
                 if st.form_submit_button("VALIDER"): submit_op("ATM", butin=b)
+        with tabs[1]:
+            with st.form("sup_f"):
+                b = st.number_input("Butin Supérette ($)", min_value=0)
+                if st.form_submit_button("VALIDER"): submit_op("Supérette", butin=b)
+        with tabs[2]:
+            with st.form("gf_f"):
+                b = st.number_input("Butin Go Fast ($)", min_value=0)
+                if st.form_submit_button("VALIDER"): submit_op("Go Fast", butin=b)
+        with tabs[3]:
+            if st.button("CONFIRMER CAMBRIOLAGE"): submit_op("Cambriolage")
         with tabs[4]:
-            with st.form("drug"):
+            with st.form("drug_f"):
                 d = st.selectbox("Produit", DRUG_LIST); q = st.number_input("Unités", min_value=0.0); b = st.number_input("Prix total ($)", min_value=0)
                 if st.form_submit_button("VALIDER VENTE"): submit_op("Drogue", butin=b, drogue=d, qte=-abs(q))
 
         st.markdown("---")
-        # --- CLASSEMENT & OBJECTIFS ---
+        # --- OBJECTIFS ET CLASSEMENT ---
         if not df_full.empty:
             df_full['Date'] = pd.to_datetime(df_full['Date'], dayfirst=True, errors='coerce')
             start_week = (datetime.datetime.now() - timedelta(days=datetime.datetime.now().weekday())).replace(hour=0, minute=0, second=0)
@@ -132,9 +131,13 @@ else:
             st.write("### 📊 Objectifs de la Semaine")
             for u_id, info in USERS.items():
                 ps = info["pseudo"]; u_data = week_data[week_data['Membre'] == ps]
-                cash = u_data[~u_data['Action'].str.contains("Drogue", na=False)]['Butin'].sum()
-                act = len(u_data[u_data['Action'] != "Drogue"])
-                vnt = abs(u_data[u_data['Action'] == "Drogue"]['Quantite'].sum())
+                cash = u_data[~u_data['Action'].str.contains("Drogue|Ajustement", na=False)]['Butin'].sum()
+                # Prise en compte des ajustements d'actions
+                adj_act = u_data[u_data['Action'] == "Ajustement Actions"]['Quantite'].sum()
+                act = len(u_data[(u_data['Action'] != "Drogue") & (~u_data['Action'].str.contains("Ajustement"))]) + adj_act
+                # Prise en compte des ajustements de ventes
+                adj_vnt = abs(u_data[u_data['Action'] == "Ajustement Ventes"]['Quantite'].sum())
+                vnt = abs(u_data[u_data['Action'] == "Drogue"]['Quantite'].sum()) + adj_vnt
                 
                 c1, c2, c3, c4 = st.columns([1.2, 1, 2, 2])
                 c1.markdown(f"**{ps}**")
@@ -142,55 +145,58 @@ else:
                 c3.progress(min(float(act)/20, 1.0), text=f"{int(act)}/20")
                 c4.progress(min(float(vnt)/300, 1.0), text=f"{int(vnt)}/300")
 
-            st.markdown("---")
-            st.write("### 🏆 Classement (Revenus)")
-            top = week_data.groupby("Membre")["Butin"].sum().reset_index().sort_values(by="Butin", ascending=False)
-            for i, row in top.reset_index(drop=True).iterrows():
-                st.write(f"{i+1}. {row['Membre']} — **{int(row['Butin']):,} $**".replace(",", " "))
-
-        st.markdown("---")
-        st.write("### 🕒 Mes 3 dernières activités")
-        mes = df_full[df_full['Membre'] == u_pseudo].tail(3).iloc[::-1].copy()
-        if not mes.empty:
-            mes['Butin'] = mes['Butin'].apply(lambda x: f"{int(float(x)):,} $".replace(',', ' '))
-            st.table(mes[['Date', 'Action', 'Butin']])
-
-    # --- NOUVEL ONGLET : GESTION DES STOCKS ---
-    elif choice == "📦 Gestion des Stocks":
-        st.markdown('<div class="gta-title">Stocks</div>', unsafe_allow_html=True)
-        # Initialisation auto si produit manquant
-        for p in DRUG_LIST:
-            if p not in df_stock['Produit'].values:
-                df_stock = pd.concat([df_stock, pd.DataFrame([{"Produit": p, "Quantite": 0.0}])], ignore_index=True)
-        
-        c1, c2 = st.columns([1.5, 1])
-        with c1:
-            st.write("### Inventaire")
-            st.table(df_stock)
-        with c2:
-            st.write("### Ajustement (Récolte/Saisie)")
-            with st.form("adj"):
-                p_sel = st.selectbox("Produit", DRUG_LIST)
-                m_sel = st.radio("Action", ["Ajout (+)", "Retrait (-)"])
-                q_sel = st.number_input("Quantité", min_value=0.0)
-                if st.form_submit_button("APPLIQUER"):
-                    val = q_sel if "Ajout" in m_sel else -q_sel
-                    df_stock.loc[df_stock['Produit'] == p_sel, 'Quantite'] += val
-                    conn.update(worksheet="Stocks", data=df_stock)
-                    st.success("Stock mis à jour !"); time.sleep(1); st.rerun()
-
-    # --- COMPTABILITÉ ---
+    # --- COMPTABILITÉ GLOBALE (AVEC MODIFICATEURS) ---
     elif choice == "Comptabilité Globale":
         st.markdown('<div class="gta-title">Trésorerie</div>', unsafe_allow_html=True)
-        if not df_v.empty:
-            def solde(etat):
-                return df_v[(df_v['Etat']==etat)&(df_v['Type']=='Recette')]['Montant'].sum() - df_v[(df_v['Etat']==etat)&(df_v['Type']=='Dépense')]['Montant'].sum()
-            p, s = solde('Propre'), solde('Sale')
-            c1, c2, c3 = st.columns(3)
-            c1.metric("PROPRE ⚜️", f"{int(p):,} $".replace(',',' '))
-            c2.metric("SALE 💵", f"{int(s):,} $".replace(',',' '))
-            c3.metric("TOTAL", f"{int(p+s):,} $".replace(',',' '))
+        def solde(etat):
+            return df_v[(df_v['Etat']==etat)&(df_v['Type']=='Recette')]['Montant'].sum() - df_v[(df_v['Etat']==etat)&(df_v['Type']=='Dépense')]['Montant'].sum()
+        p, s = solde('Propre'), solde('Sale')
+        c1, c2, c3 = st.columns(3)
+        c1.metric("PROPRE ⚜️", f"{int(p):,} $".replace(',',' '))
+        c2.metric("SALE 💵", f"{int(s):,} $".replace(',',' '))
+        c3.metric("TOTAL", f"{int(p+s):,} $".replace(',',' '))
+
+        if u_role_lv == 1:
+            st.write("---")
+            col_a, col_b = st.columns(2)
+            with col_a:
+                with st.expander("🛠️ CORRIGER UNE ERREUR (ACTIONS/VENTES)"):
+                    with st.form("adj_err"):
+                        target = st.selectbox("Membre", [u["pseudo"] for u in USERS.values()])
+                        type_adj = st.radio("Type à corriger", ["Actions", "Ventes"])
+                        val = st.number_input("Valeur à ajouter (ex: 5) ou retirer (ex: -5)", value=0.0)
+                        if st.form_submit_button("APPLIQUER CORRECTION"):
+                            df_r = conn.read(worksheet="Rapports", ttl=0)
+                            # On enregistre l'ajustement comme une ligne spéciale
+                            new_l = pd.DataFrame([{"Date": get_now(), "Membre": target, "Action": f"Ajustement {type_adj}", "Drogue": "N/A", "Quantite": val, "Butin": 0}])
+                            conn.update(worksheet="Rapports", data=pd.concat([df_r, new_l], ignore_index=True))
+                            st.success("Correction effectuée !"); time.sleep(1); st.rerun()
+            with col_b:
+                with st.expander("💰 MOUVEMENT DE CAISSE MANUEL"):
+                    with st.form("caisse_m"):
+                        tm = st.selectbox("Sens", ["Recette", "Dépense"]); em = st.selectbox("Compte", ["Sale", "Propre"]); vm = st.number_input("Montant ($)", min_value=0); rm = st.text_input("Raison")
+                        if st.form_submit_button("VALIDER MOUVEMENT"):
+                            df_t = conn.read(worksheet="Tresorerie", ttl=0)
+                            new_t = pd.DataFrame([{"Date": get_now(), "Type": tm, "Etat": em, "Catégorie": "Manuel", "Montant": float(vm), "Note": f"{rm} (par {u_pseudo})"}])
+                            conn.update(worksheet="Tresorerie", data=pd.concat([df_t, new_t], ignore_index=True))
+                            st.success("Caisse mise à jour !"); time.sleep(1); st.rerun()
+
+        st.write("### Historique financier")
         st.dataframe(df_v.sort_index(ascending=False), use_container_width=True)
+
+    # --- STOCKS ---
+    elif choice == "📦 Gestion des Stocks":
+        st.markdown('<div class="gta-title">Stocks</div>', unsafe_allow_html=True)
+        c1, c2 = st.columns([1.5, 1])
+        with c1: st.table(df_stock)
+        with c2:
+            with st.form("stk"):
+                ps = st.selectbox("Produit", DRUG_LIST); ms = st.radio("Mode", ["Ajout", "Retrait"]); qs = st.number_input("Quantité", min_value=0.0)
+                if st.form_submit_button("MISE À JOUR STOCK"):
+                    val = qs if ms == "Ajout" else -qs
+                    df_stock.loc[df_stock['Produit'] == ps, 'Quantite'] += val
+                    conn.update(worksheet="Stocks", data=df_stock)
+                    st.success("Fait !"); time.sleep(1); st.rerun()
 
     elif choice == "Archives":
         st.markdown('<div class="gta-title">Archives</div>', unsafe_allow_html=True)
