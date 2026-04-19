@@ -223,7 +223,12 @@ else:
             if p not in df_stock['Produit'].values:
                 df_stock = pd.concat([df_stock, pd.DataFrame([{"Produit": p, "Quantite": 0.0}])], ignore_index=True)
         c1, c2 = st.columns([1.5, 1])
-        with c1: st.table(df_stock)
+        with c1: # On crée une copie pour l'affichage sans modifier la base de données
+        df_display = df_stock.copy()
+        # On formate la colonne Quantité : pas de virgules inutiles et ajout de l'unité
+        df_display['Quantite'] = df_display['Quantite'].apply(lambda x: f"{int(x):,}".replace(",", " ") + " unités")
+        
+        st.table(df_display)
         with c2:
             with st.form("stk"):
                 ps = st.selectbox("Produit", DRUG_LIST); ms = st.radio("Mode", ["Ajout", "Retrait"]); qs = st.number_input("Quantité", min_value=0.0)
