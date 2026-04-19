@@ -131,7 +131,7 @@ else:
         st.write("---")
         menu = ["🔫 Tableau de bord"]
         if u_role_lv <= 2 or is_drug_boss: menu += ["📦 Gestion des Stocks"]
-        if u_role_lv <= 2: menu += ["💵 Comptabilité Globale", "Archives"]
+        if u_role_lv <= 2: menu += ["💵 Trésorerie", "Archives"]
         choice = st.radio("Navigation", menu)
         if st.button("Se déconnecter"): st.session_state.clear(); st.rerun()
 
