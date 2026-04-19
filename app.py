@@ -32,7 +32,7 @@ def set_bg_video():
             video_html = f'''
             <video autoplay loop muted playsinline style="
                 position: fixed; right: 0; bottom: 0; min-width: 100%; min-height: 100%;
-                z-index: -1; filter: brightness(0.15); opacity: 0.7; object-fit: cover;">
+                z-index: -1; filter: brightness(0.25); opacity: 0.7; object-fit: cover;">
                 <source src="data:video/mp4;base64,{bin_str}" type="video/mp4">
             </video>
             '''
