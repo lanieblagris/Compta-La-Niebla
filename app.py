@@ -8,7 +8,7 @@ import os
 import base64
 
 # --- 1. CONFIGURATION ---
-st.set_page_config(page_title="La Niebla - Luxury Cartel", page_icon="⚜️", layout="wide")
+st.set_page_config(page_title="Cartel La Niebla | FlashBack FA", page_icon="⚜️", layout="wide")
 
 USERS = {
     "Admin": {"password": "0000", "pseudo": "El Patron", "role_level": 1, "is_drug_manager": True},
