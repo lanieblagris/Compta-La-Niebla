@@ -251,16 +251,14 @@ else:
                 ms = st.radio("Type de mouvement", ["Vente (Sortie de stock)", "Achat (Entrée de stock)"])
                 qs = st.number_input("Quantité (Unités)", min_value=0.0)
                 amount = st.number_input("Montant de la transaction ($)", min_value=0)
-                
+
                 if st.form_submit_button("ENREGISTRER L'OPÉRATION"):
-                    # 1. Calcul pour le stock
-                    # Si c'est une vente, on retire du stock (-). Si c'est un achat, on ajoute (+).
+                    # 1. Mise à jour du stock physique
                     val_stock = -qs if ms == "Vente (Sortie de stock)" else qs
                     df_stock.loc[df_stock['Produit'] == ps, 'Quantite'] += val_stock
                     conn.update(worksheet="Stocks", data=df_stock)
                     
-                    # 2. Calcul pour la trésorerie (Automatique)
-                    # Si c'est une vente, c'est une Recette. Si c'est un achat, c'est une Dépense.
+                    # 2. Mise à jour de la trésorerie (Vente = Recette / Achat = Dépense)
                     type_transa = "Recette" if ms == "Vente (Sortie de stock)" else "Dépense"
                     note_auto = f"{ms} de {int(qs)} unités de {ps} par {u_pseudo}"
                     
@@ -268,13 +266,21 @@ else:
                     new_t = pd.DataFrame([{
                         "Date": get_now(),
                         "Type": type_transa,
-                        "Etat": "Sale", # Par défaut pour la drogue
+                        "Etat": "Sale", 
                         "Catégorie": "Drogue",
                         "Montant": float(amount),
                         "Note": note_auto
                     }])
                     conn.update(worksheet="Tresorerie", data=pd.concat([df_t, new_t], ignore_index=True))
                     
+                    # --- NOTE : On a supprimé l'enregistrement dans df_r (Rapports) ---
+                    # Ainsi, cette opération n'apparaîtra plus dans le classement interne
+                    # ni dans les objectifs de la semaine.
+                    
+                    st.success(f"Opération validée : {ms} enregistrée !")
+                    time.sleep(1)
+                    st.rerun()
+                
                     # 3. Rapport d'activité
                     df_r = conn.read(worksheet="Rapports", ttl=0)
                     new_r = pd.DataFrame([{
