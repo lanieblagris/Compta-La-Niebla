@@ -188,50 +188,55 @@ else:
             
             # Calcul du cycle : Dimanche 19h
             now = datetime.datetime.now()
-            # On remonte au lundi 00:00 de la semaine actuelle
             monday = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
-            # Le point de départ est le dimanche précédent à 19:00 (5h avant lundi minuit)
             start_week = monday - timedelta(hours=5) 
-            
-            # Si nous sommes dimanche et qu'il est plus de 19h, on commence déjà la semaine suivante
             if now.weekday() == 6 and now.hour >= 19:
                 start_week = now.replace(hour=19, minute=0, second=0, microsecond=0)
 
-            week_data = df_full[df_full['Date'] >= start_week]
-
-            # --- ARCHIVAGE AUTOMATIQUE DIMANCHE 19H ---
-            # On définit un nom unique pour la semaine (ex: Semaine 17 - 2026)
-            current_week_id = f"Semaine {now.isocalendar()[1]} - {now.year}"
+            # On filtre et on crée une COPIE pour ajouter la colonne Net
+            week_data = df_full[df_full['Date'] >= start_week].copy()
             
-            # On lit les archives existantes
+            # ON CRÉE LA COLONNE ICI POUR ÉVITER LE KEYERROR
+            if not week_data.empty:
+                week_data['Butin_Net'] = week_data['Butin'] * 0.65
+            else:
+                week_data['Butin_Net'] = 0.0
+
+            # --- ARCHIVAGE AUTOMATIQUE ---
+            current_week_id = f"Semaine {now.isocalendar()[1]} - {now.year}"
             df_arch = conn.read(worksheet="Archives_Paies", ttl=0)
             
-            # Si la semaine n'est pas déjà archivée ET qu'on est après dimanche 19h
             if now.weekday() == 6 and now.hour >= 19:
                 if df_arch.empty or current_week_id not in df_arch['Semaine'].values:
                     new_rows = []
                     for u_id, info in USERS.items():
                         ps = info["pseudo"]
                         u_data = week_data[week_data['Membre'] == ps]
-                        
-                        cash_net = u_data[~u_data['Action'].str.contains("Drogue|Ajustement", na=False)]['Butin_Net'].sum()
+                        cash_n = u_data[~u_data['Action'].str.contains("Drogue|Ajustement", na=False)]['Butin_Net'].sum()
                         act = len(u_data[(u_data['Action'] != "Drogue") & (~u_data['Action'].str.contains("Ajustement"))])
                         vnt = abs(u_data[u_data['Action'] == "Drogue"]['Quantite'].sum())
-                        
-                        new_rows.append({
-                            "Semaine": current_week_id,
-                            "Date_Archive": get_now(),
-                            "Membre": ps,
-                            "Total_Net": float(cash_net),
-                            "Actions_Terrain": int(act),
-                            "Ventes_Drogue": int(vnt)
-                        })
-                    
-                    # Envoi automatique vers Google Sheets
-                    updated_arch = pd.concat([df_arch, pd.DataFrame(new_rows)], ignore_index=True)
-                    conn.update(worksheet="Archives_Paies", data=updated_arch)
-                    st.toast(f"✅ Archive de la {current_week_id} générée automatiquement !")
+                        new_rows.append({"Semaine": current_week_id, "Date_Archive": get_now(), "Membre": ps, "Total_Net": float(cash_n), "Actions_Terrain": int(act), "Ventes_Drogue": int(vnt)})
+                    conn.update(worksheet="Archives_Paies", data=pd.concat([df_arch, pd.DataFrame(new_rows)], ignore_index=True))
 
+            # --- AFFICHAGE ---
+            st.write("### 📊 Objectifs de la Semaine (Net -35%)")
+            for u_id, info in USERS.items():
+                ps = info["pseudo"]
+                u_data = week_data[week_data['Membre'] == ps]
+                
+                # Utilisation de Butin_Net en toute sécurité
+                cash = u_data[~u_data['Action'].str.contains("Drogue|Ajustement", na=False)]['Butin_Net'].sum()
+                
+                adj_act = u_data[u_data['Action'] == "Ajustement Actions"]['Quantite'].sum()
+                act = len(u_data[(u_data['Action'] != "Drogue") & (~u_data['Action'].str.contains("Ajustement"))]) + adj_act
+                adj_vnt = abs(u_data[u_data['Action'] == "Ajustement Ventes"]['Quantite'].sum())
+                vnt = abs(u_data[u_data['Action'] == "Drogue"]['Quantite'].sum()) + adj_vnt
+                
+                c1, c2, c3, c4 = st.columns([1.2, 1, 2, 2])
+                c1.markdown(f"**{ps}**")
+                c2.write(f"{int(cash):,} $".replace(",", " "))
+                c3.progress(min(float(act)/20, 1.0), text=f"{int(act)}/20")
+                c4.progress(min(float(vnt)/300, 1.0), text=f"{int(vnt)}/300")
             st.write("### 📊 Objectifs de la Semaine")
             for u_id, info in USERS.items():
                 ps = info["pseudo"]; u_data = week_data[week_data['Membre'] == ps]
