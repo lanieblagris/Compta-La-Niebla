@@ -199,6 +199,39 @@ else:
 
             week_data = df_full[df_full['Date'] >= start_week]
 
+            # --- ARCHIVAGE AUTOMATIQUE DIMANCHE 19H ---
+            # On définit un nom unique pour la semaine (ex: Semaine 17 - 2026)
+            current_week_id = f"Semaine {now.isocalendar()[1]} - {now.year}"
+            
+            # On lit les archives existantes
+            df_arch = conn.read(worksheet="Archives_Paies", ttl=0)
+            
+            # Si la semaine n'est pas déjà archivée ET qu'on est après dimanche 19h
+            if now.weekday() == 6 and now.hour >= 19:
+                if df_arch.empty or current_week_id not in df_arch['Semaine'].values:
+                    new_rows = []
+                    for u_id, info in USERS.items():
+                        ps = info["pseudo"]
+                        u_data = week_data[week_data['Membre'] == ps]
+                        
+                        cash_net = u_data[~u_data['Action'].str.contains("Drogue|Ajustement", na=False)]['Butin_Net'].sum()
+                        act = len(u_data[(u_data['Action'] != "Drogue") & (~u_data['Action'].str.contains("Ajustement"))])
+                        vnt = abs(u_data[u_data['Action'] == "Drogue"]['Quantite'].sum())
+                        
+                        new_rows.append({
+                            "Semaine": current_week_id,
+                            "Date_Archive": get_now(),
+                            "Membre": ps,
+                            "Total_Net": float(cash_net),
+                            "Actions_Terrain": int(act),
+                            "Ventes_Drogue": int(vnt)
+                        })
+                    
+                    # Envoi automatique vers Google Sheets
+                    updated_arch = pd.concat([df_arch, pd.DataFrame(new_rows)], ignore_index=True)
+                    conn.update(worksheet="Archives_Paies", data=updated_arch)
+                    st.toast(f"✅ Archive de la {current_week_id} générée automatiquement !")
+
             st.write("### 📊 Objectifs de la Semaine")
             for u_id, info in USERS.items():
                 ps = info["pseudo"]; u_data = week_data[week_data['Membre'] == ps]
