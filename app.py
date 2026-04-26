@@ -182,7 +182,7 @@ else:
                 if st.form_submit_button("VALIDER VENTE"): submit_op("Drogue", butin=b, drogue=d, qte=-abs(q))
 
         st.markdown("---")
-        # --- CLASSEMENT & OBJECTIFS ---
+       # --- CLASSEMENT & OBJECTIFS ---
         if not df_full.empty:
             df_full['Date'] = pd.to_datetime(df_full['Date'], dayfirst=True, errors='coerce')
             
@@ -193,16 +193,16 @@ else:
             if now.weekday() == 6 and now.hour >= 19:
                 start_week = now.replace(hour=19, minute=0, second=0, microsecond=0)
 
-            # On filtre et on crée une COPIE pour ajouter la colonne Net
+            # On filtre les données de la semaine
             week_data = df_full[df_full['Date'] >= start_week].copy()
             
-            # ON CRÉE LA COLONNE ICI POUR ÉVITER LE KEYERROR
+            # On calcule le Net UNIQUEMENT pour l'archive (invisible à l'écran)
             if not week_data.empty:
                 week_data['Butin_Net'] = week_data['Butin'] * 0.65
             else:
                 week_data['Butin_Net'] = 0.0
 
-            # --- ARCHIVAGE AUTOMATIQUE ---
+            # --- ARCHIVAGE AUTOMATIQUE (Discret) ---
             current_week_id = f"Semaine {now.isocalendar()[1]} - {now.year}"
             df_arch = conn.read(worksheet="Archives_Paies", ttl=0)
             
@@ -218,29 +218,15 @@ else:
                         new_rows.append({"Semaine": current_week_id, "Date_Archive": get_now(), "Membre": ps, "Total_Net": float(cash_n), "Actions_Terrain": int(act), "Ventes_Drogue": int(vnt)})
                     conn.update(worksheet="Archives_Paies", data=pd.concat([df_arch, pd.DataFrame(new_rows)], ignore_index=True))
 
-            # --- AFFICHAGE ---
-            st.write("### 📊 Objectifs de la Semaine (Net -35%)")
+            # --- AFFICHAGE (100% REEL) ---
+            st.write("### 📊 Objectifs de la Semaine")
             for u_id, info in USERS.items():
                 ps = info["pseudo"]
                 u_data = week_data[week_data['Membre'] == ps]
                 
-                # Utilisation de Butin_Net en toute sécurité
-                cash = u_data[~u_data['Action'].str.contains("Drogue|Ajustement", na=False)]['Butin_Net'].sum()
-                
-                adj_act = u_data[u_data['Action'] == "Ajustement Actions"]['Quantite'].sum()
-                act = len(u_data[(u_data['Action'] != "Drogue") & (~u_data['Action'].str.contains("Ajustement"))]) + adj_act
-                adj_vnt = abs(u_data[u_data['Action'] == "Ajustement Ventes"]['Quantite'].sum())
-                vnt = abs(u_data[u_data['Action'] == "Drogue"]['Quantite'].sum()) + adj_vnt
-                
-                c1, c2, c3, c4 = st.columns([1.2, 1, 2, 2])
-                c1.markdown(f"**{ps}**")
-                c2.write(f"{int(cash):,} $".replace(",", " "))
-                c3.progress(min(float(act)/20, 1.0), text=f"{int(act)}/20")
-                c4.progress(min(float(vnt)/300, 1.0), text=f"{int(vnt)}/300")
-            st.write("### 📊 Objectifs de la Semaine")
-            for u_id, info in USERS.items():
-                ps = info["pseudo"]; u_data = week_data[week_data['Membre'] == ps]
+                # Ici on utilise 'Butin' (le vrai montant) et non 'Butin_Net'
                 cash = u_data[~u_data['Action'].str.contains("Drogue|Ajustement", na=False)]['Butin'].sum()
+                
                 adj_act = u_data[u_data['Action'] == "Ajustement Actions"]['Quantite'].sum()
                 act = len(u_data[(u_data['Action'] != "Drogue") & (~u_data['Action'].str.contains("Ajustement"))]) + adj_act
                 adj_vnt = abs(u_data[u_data['Action'] == "Ajustement Ventes"]['Quantite'].sum())
@@ -248,7 +234,7 @@ else:
                 
                 c1, c2, c3, c4 = st.columns([1.2, 1, 2, 2])
                 c1.markdown(f"**{ps}**")
-                c2.write(f"{int(cash):,} $".replace(",", " "))
+                c2.write(f"{int(cash):,} $".replace(",", " ")) # Retour au montant brut
                 c3.progress(min(float(act)/20, 1.0), text=f"{int(act)}/20")
                 c4.progress(min(float(vnt)/300, 1.0), text=f"{int(vnt)}/300")
 
