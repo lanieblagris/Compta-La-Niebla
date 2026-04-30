@@ -16,6 +16,7 @@ USERS = {
     "Dany": {"password": "081219", "pseudo": "Dany Smith", "role_level": 2, "is_drug_manager": True},
     "Aziz": {"password": "asmith", "pseudo": "Aziz Smith", "role_level": 3, "is_drug_manager": False},
     "Alain": {"password": "999cww59", "pseudo": "Alain Bourdin", "role_level": 3, "is_drug_manager": True},
+    "Lush": {"password": "123456", "pseudo": "Lush Sekou", "role_level": 3, "is_drug_manager": False},
 }
 
 DRUG_LIST = ["Marijuana", "Cocaine", "Meth", "Heroine", "Tranq", "Carte Prépayer", "B-magic", "Crack", "Purple", "Autre"]
