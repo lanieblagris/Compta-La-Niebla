@@ -1,6 +1,6 @@
 # =========================================================
 # ⚫️ LA DIVISIÓN NETWORK
-# ⚫️ VERSION CINÉMATIQUE FIXÉE
+# ⚫️ VERSION PRIVÉE (SANS INSCRIPTION)
 # =========================================================
 
 import streamlit as st
@@ -19,177 +19,96 @@ st.set_page_config(
     page_icon="⚫️",
     layout="wide"
 )
-import time
-
-# =========================================================
-# ⚫️ INTRO CINÉMATIQUE
-# =========================================================
-
-if "intro_played" not in st.session_state:
-
-    st.session_state.intro_played = False
-
-if not st.session_state.intro_played:
-
-    st.markdown("""
-    <style>
-
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap');
-
-    .intro-container {
-
-        height: 100vh;
-
-        display: flex;
-
-        justify-content: center;
-
-        align-items: center;
-
-        flex-direction: column;
-
-        background: linear-gradient(
-            135deg,
-            #050505 0%,
-            #120814 50%,
-            #1d0d24 100%
-        );
-    }
-
-    .intro-title {
-
-        font-size: 72px;
-
-        font-family: 'Orbitron', sans-serif;
-
-        font-weight: 900;
-
-        color: white;
-
-        letter-spacing: 12px;
-
-        animation: glow 2s infinite alternate;
-    }
-
-    .intro-sub {
-
-        margin-top: 20px;
-
-        color: #8f214d;
-
-        letter-spacing: 5px;
-
-        animation: pulse 2s infinite;
-    }
-
-    .intro-line {
-
-        width: 320px;
-
-        height: 2px;
-
-        background: rgba(255,255,255,0.08);
-
-        margin-top: 30px;
-
-        overflow: hidden;
-
-        position: relative;
-    }
-
-    .intro-line::before {
-
-        content: '';
-
-        position: absolute;
-
-        width: 140px;
-
-        height: 100%;
-
-        background: linear-gradient(
-            90deg,
-            transparent,
-            #8f214d,
-            transparent
-        );
-
-        animation: loading 2s infinite;
-    }
-
-    @keyframes loading {
-
-        0% {
-            left: -140px;
-        }
-
-        100% {
-            left: 320px;
-        }
-    }
-
-    @keyframes glow {
-
-        from {
-
-            text-shadow:
-            0 0 10px rgba(143,33,77,0.3),
-            0 0 20px rgba(143,33,77,0.2);
-        }
-
-        to {
-
-            text-shadow:
-            0 0 20px rgba(143,33,77,0.9),
-            0 0 40px rgba(143,33,77,0.7),
-            0 0 60px rgba(143,33,77,0.4);
-        }
-    }
-
-    @keyframes pulse {
-
-        0% {
-            opacity: 0.4;
-        }
-
-        50% {
-            opacity: 1;
-        }
-
-        100% {
-            opacity: 0.4;
-        }
-    }
-
-    </style>
-
-    <div class="intro-container">
-
-        <div class="intro-title">
-            LA DIVISIÓN
-        </div>
-
-        <div class="intro-line"></div>
-
-        <div class="intro-sub">
-            INITIALISATION DU RÉSEAU...
-        </div>
-
-    </div>
-
-    """, unsafe_allow_html=True)
-
-    time.sleep(3)
-
-    st.session_state.intro_played = True
-
-    st.rerun()
 
 # =========================================================
 # ⚫️ GOOGLE SHEETS
 # =========================================================
 
 conn = st.connection("gsheets", type=GSheetsConnection)
+
+# =========================================================
+# ⚫️ STYLE
+# =========================================================
+
+st.markdown("""
+<style>
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;700&display=swap');
+
+html, body, [class*="css"] {
+    font-family: 'Rajdhani', sans-serif;
+}
+
+.stApp {
+    background: linear-gradient(135deg, #050505 0%, #120814 50%, #1d0d24 100%);
+    color: white;
+}
+
+[data-testid="stSidebar"] {
+    background: rgba(8,8,8,0.95);
+    border-right: 1px solid rgba(120,0,40,0.4);
+}
+
+.main-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 70px;
+    font-weight: 900;
+    text-align: center;
+    color: white;
+    letter-spacing: 5px;
+    margin-bottom: -15px;
+}
+
+.sub-title {
+    text-align: center;
+    color: #8f214d;
+    letter-spacing: 3px;
+    margin-bottom: 40px;
+}
+
+.metric-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(143,33,77,0.3);
+    border-radius: 18px;
+    padding: 25px;
+    text-align: center;
+    backdrop-filter: blur(10px);
+}
+
+.card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(143,33,77,0.2);
+    border-radius: 20px;
+    padding: 20px;
+    backdrop-filter: blur(10px);
+}
+
+.stButton > button {
+    background: linear-gradient(90deg, #4b0f1c, #2b1639);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    height: 45px;
+    font-weight: bold;
+    width: 100%;
+}
+
+.stButton > button:hover {
+    background: linear-gradient(90deg, #6d1830, #41205a);
+    color: white;
+}
+
+.stTextInput input {
+    background-color: rgba(255,255,255,0.05);
+    color: white;
+}
+
+.stSelectbox div[data-baseweb="select"] {
+    background-color: rgba(255,255,255,0.05);
+}
+
+</style>
+""", unsafe_allow_html=True)
 
 # =========================================================
 # ⚫️ SESSION
@@ -225,6 +144,13 @@ try:
 except:
     reports_df = pd.DataFrame(
         columns=["Date", "Membre", "Action", "Gain"]
+    )
+
+try:
+    stocks_df = conn.read(worksheet="STOCKS", ttl=0)
+except:
+    stocks_df = pd.DataFrame(
+        columns=["Produit", "Quantite"]
     )
 
 try:
@@ -296,6 +222,10 @@ else:
     pseudo = st.session_state.pseudo
     role = st.session_state.role
 
+    # =====================================================
+    # SIDEBAR
+    # =====================================================
+
     with st.sidebar:
 
         st.markdown(f"## ⚫️ {pseudo}")
@@ -308,7 +238,9 @@ else:
             [
                 "📡 Dashboard",
                 "🎯 Activités",
-                "💰 Finance"
+                "📦 Réserves",
+                "💰 Finance",
+                "👥 Membres"
             ]
         )
 
@@ -340,8 +272,9 @@ else:
         )
 
         total_reports = len(reports_df)
+        total_members = len(users_df)
 
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
 
         with col1:
             st.markdown(f"""
@@ -356,6 +289,14 @@ else:
             <div class='metric-card'>
             <h3>🎯 Activités</h3>
             <h1>{total_reports}</h1>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col3:
+            st.markdown(f"""
+            <div class='metric-card'>
+            <h3>👥 Membres</h3>
+            <h1>{total_members}</h1>
             </div>
             """, unsafe_allow_html=True)
 
@@ -424,6 +365,83 @@ else:
                 time.sleep(1)
                 st.rerun()
 
+        st.write("---")
+
+        st.subheader("🏆 Influence interne")
+
+        if not reports_df.empty:
+
+            ranking = reports_df.groupby(
+                "Membre"
+            )["Gain"].sum().reset_index()
+
+            ranking = ranking.sort_values(
+                by="Gain",
+                ascending=False
+            )
+
+            st.dataframe(
+                ranking,
+                use_container_width=True
+            )
+
+        st.write("---")
+
+        st.subheader("🕒 Dernières activités")
+
+        st.dataframe(
+            reports_df.sort_index(
+                ascending=False
+            ),
+            use_container_width=True
+        )
+
+    # =====================================================
+    # STOCKS
+    # =====================================================
+
+    elif menu == "📦 Réserves":
+
+        st.title("📦 Réserves")
+
+        st.dataframe(
+            stocks_df,
+            use_container_width=True
+        )
+
+        with st.form("stock_form"):
+
+            produit = st.text_input("Produit")
+
+            quantite = st.number_input(
+                "Quantité"
+            )
+
+            submit = st.form_submit_button(
+                "AJOUTER"
+            )
+
+            if submit:
+
+                new_stock = pd.DataFrame([{
+                    "Produit": produit,
+                    "Quantite": quantite
+                }])
+
+                stocks_df = pd.concat(
+                    [stocks_df, new_stock],
+                    ignore_index=True
+                )
+
+                conn.update(
+                    worksheet="STOCKS",
+                    data=stocks_df
+                )
+
+                st.success("Stock ajouté.")
+                time.sleep(1)
+                st.rerun()
+
     # =====================================================
     # FINANCE
     # =====================================================
@@ -442,9 +460,67 @@ else:
             f"{int(total_money):,} $".replace(",", " ")
         )
 
+        with st.form("finance_form"):
+
+            transaction_type = st.selectbox(
+                "Type",
+                ["Recette", "Dépense"]
+            )
+
+            amount = st.number_input(
+                "Montant",
+                min_value=0
+            )
+
+            submit = st.form_submit_button(
+                "VALIDER"
+            )
+
+            if submit:
+
+                value = (
+                    amount
+                    if transaction_type == "Recette"
+                    else -amount
+                )
+
+                new_finance = pd.DataFrame([{
+                    "Date": get_now(),
+                    "Type": transaction_type,
+                    "Montant": value,
+                    "Auteur": pseudo
+                }])
+
+                finance_df = pd.concat(
+                    [finance_df, new_finance],
+                    ignore_index=True
+                )
+
+                conn.update(
+                    worksheet="FINANCE",
+                    data=finance_df
+                )
+
+                st.success("Transaction enregistrée.")
+                time.sleep(1)
+                st.rerun()
+
         st.dataframe(
             finance_df.sort_index(
                 ascending=False
             ),
+            use_container_width=True
+        )
+
+    # =====================================================
+    # MEMBRES
+    # =====================================================
+
+    elif menu == "👥 Membres":
+
+        st.title("👥 Membres")
+
+        st.dataframe(
+            users_df[["Pseudo", "Role"]],
             use_container_width=True
         )
