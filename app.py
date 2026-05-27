@@ -1,6 +1,6 @@
 # =========================================================
 # ⚫️ LA DIVISIÓN NETWORK
-# ⚫️ VERSION PRIVÉE (SANS INSCRIPTION)
+# ⚫️ VERSION PREMIUM CINÉMATIQUE
 # =========================================================
 
 import streamlit as st
@@ -20,43 +20,55 @@ st.set_page_config(
     layout="wide"
 )
 
+# =========================================================
+# ⚫️ LOADER CINÉMATIQUE
+# =========================================================
+
 st.markdown("""
 
 <style>
 
-#loader {
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;700&display=swap');
+
+#loader-wrapper {
+
     position: fixed;
-    width: 100vw;
-    height: 100vh;
-    background: linear-gradient(135deg, #050505 0%, #120814 50%, #1d0d24 100%);
     top: 0;
     left: 0;
+
+    width: 100%;
+    height: 100%;
+
+    background: linear-gradient(
+        135deg,
+        #050505 0%,
+        #120814 50%,
+        #1d0d24 100%
+    );
+
     z-index: 999999;
-    overflow: hidden;
 
-    animation: fadeOut 1.2s ease forwards;
-    animation-delay: 3s;
-}
+    display: flex;
+    justify-content: center;
+    align-items: center;
 
-.loader-content {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
+    flex-direction: column;
+
+    transition: opacity 1s ease;
 }
 
 .loader-title {
 
-    font-family: 'Orbitron', sans-serif;
     font-size: 72px;
     font-weight: 900;
 
     color: white;
 
-    letter-spacing: 10px;
+    letter-spacing: 12px;
 
-    animation: glow 2.5s infinite alternate;
+    font-family: 'Orbitron', sans-serif;
+
+    animation: glow 2s infinite alternate;
 }
 
 .loader-sub {
@@ -65,9 +77,7 @@ st.markdown("""
 
     color: #8f214d;
 
-    font-size: 18px;
-
-    letter-spacing: 4px;
+    letter-spacing: 5px;
 
     animation: pulse 2s infinite;
 }
@@ -79,7 +89,7 @@ st.markdown("""
 
     background: rgba(255,255,255,0.08);
 
-    margin: 30px auto;
+    margin-top: 30px;
 
     overflow: hidden;
 
@@ -102,7 +112,7 @@ st.markdown("""
         transparent
     );
 
-    animation: loading 1.8s infinite;
+    animation: loading 2s infinite;
 }
 
 @keyframes loading {
@@ -130,144 +140,12 @@ st.markdown("""
         text-shadow:
         0 0 20px rgba(143,33,77,0.9),
         0 0 40px rgba(143,33,77,0.7),
-        0 0 60px rgba(143,33,77,0.5);
-    }
-}
-
-@keyframes pulse {
-
-    0% {
-        opacity: 0.4;
-    }
-
-    50% {
-        opacity: 1;
-    }
-
-    100% {
-        opacity: 0.4;
-    }
-}
-
-@keyframes fadeOut {
-
-    to {
-
-        opacity: 0;
-        visibility: hidden;
-    }
-}
-
-</style>
-
-<div id="loader">
-
-    <div class="loader-content">
-
-        <div class="loader-title">
-            LA DIVISIÓN
-        </div>
-
-        <div class="loader-line"></div>
-
-        <div class="loader-sub">
-            INITIALISATION DU RÉSEAU...
-        </div>
-
-    </div>
-
-</div>
-
-""", unsafe_allow_html=True)
-
-# =========================================================
-# ⚫️ LOADING SCREEN + INTRO CINÉMATIQUE
-# =========================================================
-
-st.markdown("""
-<style>
-
-#loader {
-    position: fixed;
-    width: 100vw;
-    height: 100vh;
-    background: linear-gradient(135deg, #020202 0%, #120814 50%, #1b0d24 100%);
-    z-index: 999999;
-    top: 0;
-    left: 0;
-    overflow: hidden;
-    animation: fadeOut 1.5s ease forwards;
-    animation-delay: 3.5s;
-}
-
-.loader-content {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-}
-
-.loader-title {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 70px;
-    font-weight: 900;
-    color: white;
-    letter-spacing: 10px;
-    animation: glow 3s infinite alternate;
-}
-
-.loader-sub {
-    margin-top: 20px;
-    color: #8f214d;
-    font-size: 18px;
-    letter-spacing: 5px;
-    animation: pulse 2s infinite;
-}
-
-.loader-line {
-    width: 300px;
-    height: 2px;
-    background: rgba(255,255,255,0.1);
-    margin: 30px auto;
-    position: relative;
-    overflow: hidden;
-}
-
-.loader-line::before {
-    content: '';
-    position: absolute;
-    width: 120px;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, #8f214d, transparent);
-    animation: loading 2s infinite;
-}
-
-@keyframes loading {
-    0% {
-        left: -120px;
-    }
-    100% {
-        left: 300px;
-    }
-}
-
-@keyframes glow {
-    from {
-        text-shadow:
-        0 0 10px rgba(143,33,77,0.4),
-        0 0 20px rgba(143,33,77,0.3);
-    }
-
-    to {
-        text-shadow:
-        0 0 20px rgba(143,33,77,0.8),
-        0 0 40px rgba(143,33,77,0.6),
         0 0 60px rgba(143,33,77,0.4);
     }
 }
 
 @keyframes pulse {
+
     0% {
         opacity: 0.4;
     }
@@ -281,79 +159,221 @@ st.markdown("""
     }
 }
 
-@keyframes fadeOut {
-    to {
-        opacity: 0;
-        visibility: hidden;
-    }
+.stApp {
+
+    background: linear-gradient(
+        135deg,
+        #050505 0%,
+        #120814 50%,
+        #1d0d24 100%
+    );
+
+    color: white;
+}
+
+[data-testid="stSidebar"] {
+
+    background: rgba(8,8,8,0.95);
+
+    border-right: 1px solid rgba(120,0,40,0.4);
 }
 
 .main-title {
-    animation: titleAppear 2s ease;
+
+    font-family: 'Orbitron', sans-serif;
+
+    font-size: 72px;
+
+    font-weight: 900;
+
+    text-align: center;
+
+    color: white;
+
+    letter-spacing: 8px;
+
+    animation: titleAppear 1.5s ease;
+}
+
+.sub-title {
+
+    text-align: center;
+
+    color: #8f214d;
+
+    letter-spacing: 5px;
+
+    margin-bottom: 40px;
+
+    animation: fadeIn 2s ease;
+}
+
+.metric-card {
+
+    background: rgba(255,255,255,0.04);
+
+    border: 1px solid rgba(143,33,77,0.25);
+
+    border-radius: 20px;
+
+    padding: 25px;
+
+    text-align: center;
+
+    backdrop-filter: blur(12px);
+
+    transition: 0.4s ease;
+}
+
+.metric-card:hover {
+
+    transform: translateY(-8px);
+
+    box-shadow:
+    0 0 20px rgba(143,33,77,0.25),
+    0 0 40px rgba(143,33,77,0.12);
+}
+
+.card {
+
+    background: rgba(255,255,255,0.03);
+
+    border: 1px solid rgba(143,33,77,0.18);
+
+    border-radius: 20px;
+
+    padding: 25px;
+
+    backdrop-filter: blur(10px);
+
+    animation: cardAppear 1s ease;
+}
+
+.stButton > button {
+
+    background: linear-gradient(
+        90deg,
+        #4b0f1c,
+        #2b1639
+    );
+
+    color: white;
+
+    border: none;
+
+    border-radius: 12px;
+
+    height: 45px;
+
+    font-weight: bold;
+
+    width: 100%;
+
+    transition: 0.3s ease;
+}
+
+.stButton > button:hover {
+
+    transform: translateY(-2px);
+
+    box-shadow:
+    0 0 15px rgba(143,33,77,0.4);
+}
+
+.stTextInput input {
+
+    background-color: rgba(255,255,255,0.05);
+
+    color: white;
+}
+
+.stSelectbox div[data-baseweb="select"] {
+
+    background-color: rgba(255,255,255,0.05);
 }
 
 @keyframes titleAppear {
 
     0% {
+
         opacity: 0;
+
         transform: translateY(40px);
+
         letter-spacing: 20px;
     }
 
     100% {
+
         opacity: 1;
+
         transform: translateY(0px);
-        letter-spacing: 5px;
+
+        letter-spacing: 8px;
     }
 }
 
-.card {
-    animation: cardAppear 1s ease;
+@keyframes fadeIn {
+
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 @keyframes cardAppear {
 
     0% {
+
         opacity: 0;
+
         transform: translateY(30px);
     }
 
     100% {
+
         opacity: 1;
+
         transform: translateY(0px);
     }
 }
 
-.metric-card {
-    transition: 0.4s ease;
-}
-
-.metric-card:hover {
-    transform: translateY(-8px);
-    box-shadow:
-    0 0 20px rgba(143,33,77,0.3),
-    0 0 40px rgba(143,33,77,0.15);
-}
-
 </style>
 
-<div id="loader">
+<div id="loader-wrapper">
 
-    <div class="loader-content">
+    <div class="loader-title">
+        LA DIVISIÓN
+    </div>
 
-        <div class="loader-title">
-            LA DIVISIÓN
-        </div>
+    <div class="loader-line"></div>
 
-        <div class="loader-line"></div>
-
-        <div class="loader-sub">
-            INITIALISATION DU RÉSEAU...
-        </div>
-
+    <div class="loader-sub">
+        INITIALISATION DU RÉSEAU...
     </div>
 
 </div>
+
+<script>
+
+setTimeout(function() {
+
+    const loader = document.getElementById("loader-wrapper");
+
+    loader.style.opacity = "0";
+
+    setTimeout(() => {
+
+        loader.style.display = "none";
+
+    }, 1000);
+
+}, 3000);
+
+</script>
 
 """, unsafe_allow_html=True)
 
@@ -362,90 +382,6 @@ st.markdown("""
 # =========================================================
 
 conn = st.connection("gsheets", type=GSheetsConnection)
-
-# =========================================================
-# ⚫️ STYLE
-# =========================================================
-
-st.markdown("""
-<style>
-
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;700&display=swap');
-
-html, body, [class*="css"] {
-    font-family: 'Rajdhani', sans-serif;
-}
-
-.stApp {
-    background: linear-gradient(135deg, #050505 0%, #120814 50%, #1d0d24 100%);
-    color: white;
-}
-
-[data-testid="stSidebar"] {
-    background: rgba(8,8,8,0.95);
-    border-right: 1px solid rgba(120,0,40,0.4);
-}
-
-.main-title {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 70px;
-    font-weight: 900;
-    text-align: center;
-    color: white;
-    letter-spacing: 5px;
-    margin-bottom: -15px;
-}
-
-.sub-title {
-    text-align: center;
-    color: #8f214d;
-    letter-spacing: 3px;
-    margin-bottom: 40px;
-}
-
-.metric-card {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(143,33,77,0.3);
-    border-radius: 18px;
-    padding: 25px;
-    text-align: center;
-    backdrop-filter: blur(10px);
-}
-
-.card {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(143,33,77,0.2);
-    border-radius: 20px;
-    padding: 20px;
-    backdrop-filter: blur(10px);
-}
-
-.stButton > button {
-    background: linear-gradient(90deg, #4b0f1c, #2b1639);
-    color: white;
-    border: none;
-    border-radius: 12px;
-    height: 45px;
-    font-weight: bold;
-    width: 100%;
-}
-
-.stButton > button:hover {
-    background: linear-gradient(90deg, #6d1830, #41205a);
-    color: white;
-}
-
-.stTextInput input {
-    background-color: rgba(255,255,255,0.05);
-    color: white;
-}
-
-.stSelectbox div[data-baseweb="select"] {
-    background-color: rgba(255,255,255,0.05);
-}
-
-</style>
-""", unsafe_allow_html=True)
 
 # =========================================================
 # ⚫️ SESSION
@@ -481,13 +417,6 @@ try:
 except:
     reports_df = pd.DataFrame(
         columns=["Date", "Membre", "Action", "Gain"]
-    )
-
-try:
-    stocks_df = conn.read(worksheet="STOCKS", ttl=0)
-except:
-    stocks_df = pd.DataFrame(
-        columns=["Produit", "Quantite"]
     )
 
 try:
@@ -559,10 +488,6 @@ else:
     pseudo = st.session_state.pseudo
     role = st.session_state.role
 
-    # =====================================================
-    # SIDEBAR
-    # =====================================================
-
     with st.sidebar:
 
         st.markdown(f"## ⚫️ {pseudo}")
@@ -575,9 +500,7 @@ else:
             [
                 "📡 Dashboard",
                 "🎯 Activités",
-                "📦 Réserves",
-                "💰 Finance",
-                "👥 Membres"
+                "💰 Finance"
             ]
         )
 
@@ -609,9 +532,8 @@ else:
         )
 
         total_reports = len(reports_df)
-        total_members = len(users_df)
 
-        col1, col2, col3 = st.columns(3)
+        col1, col2 = st.columns(2)
 
         with col1:
             st.markdown(f"""
@@ -626,14 +548,6 @@ else:
             <div class='metric-card'>
             <h3>🎯 Activités</h3>
             <h1>{total_reports}</h1>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with col3:
-            st.markdown(f"""
-            <div class='metric-card'>
-            <h3>👥 Membres</h3>
-            <h1>{total_members}</h1>
             </div>
             """, unsafe_allow_html=True)
 
@@ -722,63 +636,6 @@ else:
                 use_container_width=True
             )
 
-        st.write("---")
-
-        st.subheader("🕒 Dernières activités")
-
-        st.dataframe(
-            reports_df.sort_index(
-                ascending=False
-            ),
-            use_container_width=True
-        )
-
-    # =====================================================
-    # STOCKS
-    # =====================================================
-
-    elif menu == "📦 Réserves":
-
-        st.title("📦 Réserves")
-
-        st.dataframe(
-            stocks_df,
-            use_container_width=True
-        )
-
-        with st.form("stock_form"):
-
-            produit = st.text_input("Produit")
-
-            quantite = st.number_input(
-                "Quantité"
-            )
-
-            submit = st.form_submit_button(
-                "AJOUTER"
-            )
-
-            if submit:
-
-                new_stock = pd.DataFrame([{
-                    "Produit": produit,
-                    "Quantite": quantite
-                }])
-
-                stocks_df = pd.concat(
-                    [stocks_df, new_stock],
-                    ignore_index=True
-                )
-
-                conn.update(
-                    worksheet="STOCKS",
-                    data=stocks_df
-                )
-
-                st.success("Stock ajouté.")
-                time.sleep(1)
-                st.rerun()
-
     # =====================================================
     # FINANCE
     # =====================================================
@@ -797,67 +654,9 @@ else:
             f"{int(total_money):,} $".replace(",", " ")
         )
 
-        with st.form("finance_form"):
-
-            transaction_type = st.selectbox(
-                "Type",
-                ["Recette", "Dépense"]
-            )
-
-            amount = st.number_input(
-                "Montant",
-                min_value=0
-            )
-
-            submit = st.form_submit_button(
-                "VALIDER"
-            )
-
-            if submit:
-
-                value = (
-                    amount
-                    if transaction_type == "Recette"
-                    else -amount
-                )
-
-                new_finance = pd.DataFrame([{
-                    "Date": get_now(),
-                    "Type": transaction_type,
-                    "Montant": value,
-                    "Auteur": pseudo
-                }])
-
-                finance_df = pd.concat(
-                    [finance_df, new_finance],
-                    ignore_index=True
-                )
-
-                conn.update(
-                    worksheet="FINANCE",
-                    data=finance_df
-                )
-
-                st.success("Transaction enregistrée.")
-                time.sleep(1)
-                st.rerun()
-
         st.dataframe(
             finance_df.sort_index(
                 ascending=False
             ),
-            use_container_width=True
-        )
-
-    # =====================================================
-    # MEMBRES
-    # =====================================================
-
-    elif menu == "👥 Membres":
-
-        st.title("👥 Membres")
-
-        st.dataframe(
-            users_df[["Pseudo", "Role"]],
             use_container_width=True
         )
