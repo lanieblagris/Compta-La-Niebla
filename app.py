@@ -21,6 +21,183 @@ st.set_page_config(
 )
 
 # =========================================================
+# ⚫️ LOADING SCREEN + INTRO CINÉMATIQUE
+# =========================================================
+
+st.markdown("""
+<style>
+
+#loader {
+    position: fixed;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(135deg, #020202 0%, #120814 50%, #1b0d24 100%);
+    z-index: 999999;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+    animation: fadeOut 1.5s ease forwards;
+    animation-delay: 3.5s;
+}
+
+.loader-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.loader-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 70px;
+    font-weight: 900;
+    color: white;
+    letter-spacing: 10px;
+    animation: glow 3s infinite alternate;
+}
+
+.loader-sub {
+    margin-top: 20px;
+    color: #8f214d;
+    font-size: 18px;
+    letter-spacing: 5px;
+    animation: pulse 2s infinite;
+}
+
+.loader-line {
+    width: 300px;
+    height: 2px;
+    background: rgba(255,255,255,0.1);
+    margin: 30px auto;
+    position: relative;
+    overflow: hidden;
+}
+
+.loader-line::before {
+    content: '';
+    position: absolute;
+    width: 120px;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, #8f214d, transparent);
+    animation: loading 2s infinite;
+}
+
+@keyframes loading {
+    0% {
+        left: -120px;
+    }
+    100% {
+        left: 300px;
+    }
+}
+
+@keyframes glow {
+    from {
+        text-shadow:
+        0 0 10px rgba(143,33,77,0.4),
+        0 0 20px rgba(143,33,77,0.3);
+    }
+
+    to {
+        text-shadow:
+        0 0 20px rgba(143,33,77,0.8),
+        0 0 40px rgba(143,33,77,0.6),
+        0 0 60px rgba(143,33,77,0.4);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 0.4;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0.4;
+    }
+}
+
+@keyframes fadeOut {
+    to {
+        opacity: 0;
+        visibility: hidden;
+    }
+}
+
+.main-title {
+    animation: titleAppear 2s ease;
+}
+
+@keyframes titleAppear {
+
+    0% {
+        opacity: 0;
+        transform: translateY(40px);
+        letter-spacing: 20px;
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0px);
+        letter-spacing: 5px;
+    }
+}
+
+.card {
+    animation: cardAppear 1s ease;
+}
+
+@keyframes cardAppear {
+
+    0% {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0px);
+    }
+}
+
+.metric-card {
+    transition: 0.4s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-8px);
+    box-shadow:
+    0 0 20px rgba(143,33,77,0.3),
+    0 0 40px rgba(143,33,77,0.15);
+}
+
+</style>
+
+<div id="loader">
+
+    <div class="loader-content">
+
+        <div class="loader-title">
+            LA DIVISIÓN
+        </div>
+
+        <div class="loader-line"></div>
+
+        <div class="loader-sub">
+            INITIALISATION DU RÉSEAU...
+        </div>
+
+    </div>
+
+</div>
+
+""", unsafe_allow_html=True)
+
+# =========================================================
 # ⚫️ GOOGLE SHEETS
 # =========================================================
 
