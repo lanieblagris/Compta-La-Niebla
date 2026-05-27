@@ -1,6 +1,6 @@
 # =========================================================
 # ⚫️ LA DIVISIÓN NETWORK
-# ⚫️ VERSION PREMIUM CINÉMATIQUE
+# ⚫️ VERSION CINÉMATIQUE FIXÉE
 # =========================================================
 
 import streamlit as st
@@ -33,6 +33,7 @@ st.markdown("""
 #loader-wrapper {
 
     position: fixed;
+
     top: 0;
     left: 0;
 
@@ -46,7 +47,7 @@ st.markdown("""
         #1d0d24 100%
     );
 
-    z-index: 999999;
+    z-index: 9999;
 
     display: flex;
     justify-content: center;
@@ -60,6 +61,7 @@ st.markdown("""
 .loader-title {
 
     font-size: 72px;
+
     font-weight: 900;
 
     color: white;
@@ -191,8 +193,6 @@ st.markdown("""
     color: white;
 
     letter-spacing: 8px;
-
-    animation: titleAppear 1.5s ease;
 }
 
 .sub-title {
@@ -204,8 +204,6 @@ st.markdown("""
     letter-spacing: 5px;
 
     margin-bottom: 40px;
-
-    animation: fadeIn 2s ease;
 }
 
 .metric-card {
@@ -245,8 +243,6 @@ st.markdown("""
     padding: 25px;
 
     backdrop-filter: blur(10px);
-
-    animation: cardAppear 1s ease;
 }
 
 .stButton > button {
@@ -268,13 +264,9 @@ st.markdown("""
     font-weight: bold;
 
     width: 100%;
-
-    transition: 0.3s ease;
 }
 
 .stButton > button:hover {
-
-    transform: translateY(-2px);
 
     box-shadow:
     0 0 15px rgba(143,33,77,0.4);
@@ -285,60 +277,6 @@ st.markdown("""
     background-color: rgba(255,255,255,0.05);
 
     color: white;
-}
-
-.stSelectbox div[data-baseweb="select"] {
-
-    background-color: rgba(255,255,255,0.05);
-}
-
-@keyframes titleAppear {
-
-    0% {
-
-        opacity: 0;
-
-        transform: translateY(40px);
-
-        letter-spacing: 20px;
-    }
-
-    100% {
-
-        opacity: 1;
-
-        transform: translateY(0px);
-
-        letter-spacing: 8px;
-    }
-}
-
-@keyframes fadeIn {
-
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
-}
-
-@keyframes cardAppear {
-
-    0% {
-
-        opacity: 0;
-
-        transform: translateY(30px);
-    }
-
-    100% {
-
-        opacity: 1;
-
-        transform: translateY(0px);
-    }
 }
 
 </style>
@@ -359,19 +297,27 @@ st.markdown("""
 
 <script>
 
-setTimeout(function() {
+window.addEventListener("load", function() {
 
-    const loader = document.getElementById("loader-wrapper");
+    setTimeout(function() {
 
-    loader.style.opacity = "0";
+        const loader = document.getElementById("loader-wrapper");
 
-    setTimeout(() => {
+        if (loader) {
 
-        loader.style.display = "none";
+            loader.style.opacity = "0";
 
-    }, 1000);
+            setTimeout(function() {
 
-}, 3000);
+                loader.remove();
+
+            }, 1000);
+
+        }
+
+    }, 2500);
+
+});
 
 </script>
 
@@ -615,26 +561,6 @@ else:
                 st.success("Activité enregistrée.")
                 time.sleep(1)
                 st.rerun()
-
-        st.write("---")
-
-        st.subheader("🏆 Influence interne")
-
-        if not reports_df.empty:
-
-            ranking = reports_df.groupby(
-                "Membre"
-            )["Gain"].sum().reset_index()
-
-            ranking = ranking.sort_values(
-                by="Gain",
-                ascending=False
-            )
-
-            st.dataframe(
-                ranking,
-                use_container_width=True
-            )
 
     # =====================================================
     # FINANCE
