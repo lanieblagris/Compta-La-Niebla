@@ -20,6 +20,166 @@ st.set_page_config(
     layout="wide"
 )
 
+st.markdown("""
+
+<style>
+
+#loader {
+    position: fixed;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(135deg, #050505 0%, #120814 50%, #1d0d24 100%);
+    top: 0;
+    left: 0;
+    z-index: 999999;
+    overflow: hidden;
+
+    animation: fadeOut 1.2s ease forwards;
+    animation-delay: 3s;
+}
+
+.loader-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.loader-title {
+
+    font-family: 'Orbitron', sans-serif;
+    font-size: 72px;
+    font-weight: 900;
+
+    color: white;
+
+    letter-spacing: 10px;
+
+    animation: glow 2.5s infinite alternate;
+}
+
+.loader-sub {
+
+    margin-top: 20px;
+
+    color: #8f214d;
+
+    font-size: 18px;
+
+    letter-spacing: 4px;
+
+    animation: pulse 2s infinite;
+}
+
+.loader-line {
+
+    width: 320px;
+    height: 2px;
+
+    background: rgba(255,255,255,0.08);
+
+    margin: 30px auto;
+
+    overflow: hidden;
+
+    position: relative;
+}
+
+.loader-line::before {
+
+    content: '';
+
+    position: absolute;
+
+    width: 140px;
+    height: 100%;
+
+    background: linear-gradient(
+        90deg,
+        transparent,
+        #8f214d,
+        transparent
+    );
+
+    animation: loading 1.8s infinite;
+}
+
+@keyframes loading {
+
+    0% {
+        left: -140px;
+    }
+
+    100% {
+        left: 320px;
+    }
+}
+
+@keyframes glow {
+
+    from {
+
+        text-shadow:
+        0 0 10px rgba(143,33,77,0.3),
+        0 0 20px rgba(143,33,77,0.2);
+    }
+
+    to {
+
+        text-shadow:
+        0 0 20px rgba(143,33,77,0.9),
+        0 0 40px rgba(143,33,77,0.7),
+        0 0 60px rgba(143,33,77,0.5);
+    }
+}
+
+@keyframes pulse {
+
+    0% {
+        opacity: 0.4;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0.4;
+    }
+}
+
+@keyframes fadeOut {
+
+    to {
+
+        opacity: 0;
+        visibility: hidden;
+    }
+}
+
+</style>
+
+<div id="loader">
+
+    <div class="loader-content">
+
+        <div class="loader-title">
+            LA DIVISIÓN
+        </div>
+
+        <div class="loader-line"></div>
+
+        <div class="loader-sub">
+            INITIALISATION DU RÉSEAU...
+        </div>
+
+    </div>
+
+</div>
+
+""", unsafe_allow_html=True)
+
 # =========================================================
 # ⚫️ LOADING SCREEN + INTRO CINÉMATIQUE
 # =========================================================
