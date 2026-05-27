@@ -19,309 +19,171 @@ st.set_page_config(
     page_icon="⚫️",
     layout="wide"
 )
+import time
 
 # =========================================================
-# ⚫️ LOADER CINÉMATIQUE
+# ⚫️ INTRO CINÉMATIQUE
 # =========================================================
 
-st.markdown("""
+if "intro_played" not in st.session_state:
 
-<style>
+    st.session_state.intro_played = False
 
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;700&display=swap');
+if not st.session_state.intro_played:
 
-#loader-wrapper {
+    st.markdown("""
+    <style>
 
-    position: fixed;
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap');
 
-    top: 0;
-    left: 0;
+    .intro-container {
 
-    width: 100%;
-    height: 100%;
+        height: 100vh;
 
-    background: linear-gradient(
-        135deg,
-        #050505 0%,
-        #120814 50%,
-        #1d0d24 100%
-    );
+        display: flex;
 
-    z-index: 9999;
+        justify-content: center;
 
-    display: flex;
-    justify-content: center;
-    align-items: center;
+        align-items: center;
 
-    flex-direction: column;
+        flex-direction: column;
 
-    transition: opacity 1s ease;
-}
-
-.loader-title {
-
-    font-size: 72px;
-
-    font-weight: 900;
-
-    color: white;
-
-    letter-spacing: 12px;
-
-    font-family: 'Orbitron', sans-serif;
-
-    animation: glow 2s infinite alternate;
-}
-
-.loader-sub {
-
-    margin-top: 20px;
-
-    color: #8f214d;
-
-    letter-spacing: 5px;
-
-    animation: pulse 2s infinite;
-}
-
-.loader-line {
-
-    width: 320px;
-    height: 2px;
-
-    background: rgba(255,255,255,0.08);
-
-    margin-top: 30px;
-
-    overflow: hidden;
-
-    position: relative;
-}
-
-.loader-line::before {
-
-    content: '';
-
-    position: absolute;
-
-    width: 140px;
-    height: 100%;
-
-    background: linear-gradient(
-        90deg,
-        transparent,
-        #8f214d,
-        transparent
-    );
-
-    animation: loading 2s infinite;
-}
-
-@keyframes loading {
-
-    0% {
-        left: -140px;
+        background: linear-gradient(
+            135deg,
+            #050505 0%,
+            #120814 50%,
+            #1d0d24 100%
+        );
     }
 
-    100% {
-        left: 320px;
-    }
-}
+    .intro-title {
 
-@keyframes glow {
+        font-size: 72px;
 
-    from {
+        font-family: 'Orbitron', sans-serif;
 
-        text-shadow:
-        0 0 10px rgba(143,33,77,0.3),
-        0 0 20px rgba(143,33,77,0.2);
-    }
+        font-weight: 900;
 
-    to {
+        color: white;
 
-        text-shadow:
-        0 0 20px rgba(143,33,77,0.9),
-        0 0 40px rgba(143,33,77,0.7),
-        0 0 60px rgba(143,33,77,0.4);
-    }
-}
+        letter-spacing: 12px;
 
-@keyframes pulse {
-
-    0% {
-        opacity: 0.4;
+        animation: glow 2s infinite alternate;
     }
 
-    50% {
-        opacity: 1;
+    .intro-sub {
+
+        margin-top: 20px;
+
+        color: #8f214d;
+
+        letter-spacing: 5px;
+
+        animation: pulse 2s infinite;
     }
 
-    100% {
-        opacity: 0.4;
+    .intro-line {
+
+        width: 320px;
+
+        height: 2px;
+
+        background: rgba(255,255,255,0.08);
+
+        margin-top: 30px;
+
+        overflow: hidden;
+
+        position: relative;
     }
-}
 
-.stApp {
+    .intro-line::before {
 
-    background: linear-gradient(
-        135deg,
-        #050505 0%,
-        #120814 50%,
-        #1d0d24 100%
-    );
+        content: '';
 
-    color: white;
-}
+        position: absolute;
 
-[data-testid="stSidebar"] {
+        width: 140px;
 
-    background: rgba(8,8,8,0.95);
+        height: 100%;
 
-    border-right: 1px solid rgba(120,0,40,0.4);
-}
+        background: linear-gradient(
+            90deg,
+            transparent,
+            #8f214d,
+            transparent
+        );
 
-.main-title {
+        animation: loading 2s infinite;
+    }
 
-    font-family: 'Orbitron', sans-serif;
+    @keyframes loading {
 
-    font-size: 72px;
-
-    font-weight: 900;
-
-    text-align: center;
-
-    color: white;
-
-    letter-spacing: 8px;
-}
-
-.sub-title {
-
-    text-align: center;
-
-    color: #8f214d;
-
-    letter-spacing: 5px;
-
-    margin-bottom: 40px;
-}
-
-.metric-card {
-
-    background: rgba(255,255,255,0.04);
-
-    border: 1px solid rgba(143,33,77,0.25);
-
-    border-radius: 20px;
-
-    padding: 25px;
-
-    text-align: center;
-
-    backdrop-filter: blur(12px);
-
-    transition: 0.4s ease;
-}
-
-.metric-card:hover {
-
-    transform: translateY(-8px);
-
-    box-shadow:
-    0 0 20px rgba(143,33,77,0.25),
-    0 0 40px rgba(143,33,77,0.12);
-}
-
-.card {
-
-    background: rgba(255,255,255,0.03);
-
-    border: 1px solid rgba(143,33,77,0.18);
-
-    border-radius: 20px;
-
-    padding: 25px;
-
-    backdrop-filter: blur(10px);
-}
-
-.stButton > button {
-
-    background: linear-gradient(
-        90deg,
-        #4b0f1c,
-        #2b1639
-    );
-
-    color: white;
-
-    border: none;
-
-    border-radius: 12px;
-
-    height: 45px;
-
-    font-weight: bold;
-
-    width: 100%;
-}
-
-.stButton > button:hover {
-
-    box-shadow:
-    0 0 15px rgba(143,33,77,0.4);
-}
-
-.stTextInput input {
-
-    background-color: rgba(255,255,255,0.05);
-
-    color: white;
-}
-
-</style>
-
-<div id="loader-wrapper">
-
-    <div class="loader-title">
-        LA DIVISIÓN
-    </div>
-
-    <div class="loader-line"></div>
-
-    <div class="loader-sub">
-        INITIALISATION DU RÉSEAU...
-    </div>
-
-</div>
-
-<script>
-
-window.addEventListener("load", function() {
-
-    setTimeout(function() {
-
-        const loader = document.getElementById("loader-wrapper");
-
-        if (loader) {
-
-            loader.style.opacity = "0";
-
-            setTimeout(function() {
-
-                loader.remove();
-
-            }, 1000);
-
+        0% {
+            left: -140px;
         }
 
-    }, 2500);
+        100% {
+            left: 320px;
+        }
+    }
 
-});
+    @keyframes glow {
 
-</script>
+        from {
 
-""", unsafe_allow_html=True)
+            text-shadow:
+            0 0 10px rgba(143,33,77,0.3),
+            0 0 20px rgba(143,33,77,0.2);
+        }
+
+        to {
+
+            text-shadow:
+            0 0 20px rgba(143,33,77,0.9),
+            0 0 40px rgba(143,33,77,0.7),
+            0 0 60px rgba(143,33,77,0.4);
+        }
+    }
+
+    @keyframes pulse {
+
+        0% {
+            opacity: 0.4;
+        }
+
+        50% {
+            opacity: 1;
+        }
+
+        100% {
+            opacity: 0.4;
+        }
+    }
+
+    </style>
+
+    <div class="intro-container">
+
+        <div class="intro-title">
+            LA DIVISIÓN
+        </div>
+
+        <div class="intro-line"></div>
+
+        <div class="intro-sub">
+            INITIALISATION DU RÉSEAU...
+        </div>
+
+    </div>
+
+    """, unsafe_allow_html=True)
+
+    time.sleep(3)
+
+    st.session_state.intro_played = True
+
+    st.rerun()
 
 # =========================================================
 # ⚫️ GOOGLE SHEETS
